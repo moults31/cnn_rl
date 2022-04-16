@@ -15,7 +15,7 @@ sudo apt install nvidia-cuda-toolkit
 conda create --name dl4h_22sp python=3.8.12
 conda activate dl4h_22sp
 
-pip3 install torch==1.10.0 torchvision==0.11.1 torchaudio==0.10.0 torchtext==0.11.0
+pip3 install torch==1.10.2+cu113 torchvision torchaudio torchtext
 
 export TORCH=1.10.0
 export CUDA=cu113
@@ -28,6 +28,9 @@ pip install torch-spline-conv -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}
 
 pip install notebook nltk matplotlib gensim umap-learn opencv-python scikit-learn
 ```
+
+To install CUDA toolkit: https://developer.nvidia.com/cuda-downloads
+
 #### When running in a new terminal:
 ```
 cd path/to/cnn_rl

@@ -47,7 +47,8 @@ def main():
     model = train_cnn(model, train_loader)
 
     # Evaluate the model's predictions against the ground truth
-    y_score_test, y_score_val, y_pred_test, y_pred_val, y_test, y_val = eval_model(model, test_loader, val_loader)
+    y_score_test, y_pred_test, y_test = eval_model(model, test_loader)
+    y_score_val, y_pred_val, y_val = eval_model(model, val_loader)
     acc_test = accuracy_score(y_test, y_pred_test)
     acc_val = accuracy_score(y_val, y_pred_val)
     auc_test = roc_auc_score(y_test, y_score_test)
@@ -58,7 +59,7 @@ def main():
     print(("Test AUC: " + str(auc_test)))
     print(("Validation AUC: " + str(auc_val)))
 
-def eval_model(model, test_loader, val_loader):
+def eval_model(model, dataloader):
     """
     :return:
         Y_pred_test: prediction of model on the test dataloder.
@@ -69,40 +70,24 @@ def eval_model(model, test_loader, val_loader):
         Y_val: truth labels for the val set. Should be an numpy array of ints
     """
     model.eval()
-    Y_score_test = torch.FloatTensor()
-    Y_score_val = torch.FloatTensor()
-    Y_pred_test = []
-    Y_pred_val = []
-    Y_test = []
-    Y_val = []
-    for data, target in test_loader:
+    Y_score = torch.FloatTensor()
+    Y_pred = []
+    Y_true = []
+    for data, target in dataloader:
         data = data.to(device)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
         predictions = predictions.to('cpu')
         y_hat = outputs[:,1]
 
-        Y_score_test = np.concatenate((Y_score_test, y_hat.to('cpu').detach().numpy()), axis=0)
-        Y_pred_test.append(predictions)
-        Y_test.append(target)
+        Y_score = np.concatenate((Y_score, y_hat.to('cpu').detach().numpy()), axis=0)
+        Y_pred.append(predictions)
+        Y_true.append(target)
 
-    for data, target in val_loader:
-        data = data.to(device)
-        outputs = model(data)
-        _, predictions = torch.max(outputs, 1)
-        predictions = predictions.to('cpu')
-        y_hat = outputs[:,1]
-        Y_score_val = np.concatenate((Y_score_val, y_hat.to('cpu').detach().numpy()), axis=0)
-        Y_pred_val.append(predictions)
-        Y_val.append(target)
+    Y_pred = np.concatenate(Y_pred, axis=0)
+    Y_true = np.concatenate(Y_true, axis=0)
 
-    print(type(Y_pred_test))
-    Y_pred_test = np.concatenate(Y_pred_test, axis=0)
-    Y_pred_val = np.concatenate(Y_pred_val, axis=0)
-    Y_test = np.concatenate(Y_test, axis=0)
-    Y_val = np.concatenate(Y_val, axis=0)
-
-    return Y_score_test, Y_score_val, Y_pred_test, Y_pred_val, Y_test, Y_val
+    return Y_score, Y_pred, Y_true
 
 def train_cnn(model, train_dataloader, n_epoch=10):
     """
