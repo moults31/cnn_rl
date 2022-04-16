@@ -9,19 +9,19 @@ import common
 import numpy as np
 import cv2
 
+# Optional suffix for output image name, use for debugging.
+OUT_IMG_SUFFIX = ''
+
 def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.Norm_method.MINMAX):
     """
     Top-level function that loads the provided 
     csv and saves images to disk as png.
     """
     patients = dict()
-    imgrowdict = dict()
-    mindict = dict()
-    maxdict = dict()
+    unknown_items = list()
 
     with open(csv_file, 'r') as f:
         i = 0
-        imgrowidx = 0
         for row in reader(f):
             if i == 0:
                 # Skip header row, we'll parse the columns ourselves
@@ -31,6 +31,10 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
             # Apply names to each column
             subject_id, itemid, admittime, dischtime, charttime, \
                 value, valuenum, valueuom, hospital_expire_flag = cast_csv_row(row)
+            if not itemid in common.item2feature:
+                if not itemid in unknown_items:
+                    unknown_items.append(itemid)
+                continue
 
             # Get the object for this patient, creating one if we haven't seen them before
             if not subject_id in patients:
@@ -44,8 +48,12 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
             valuenum_norm = normalize(valuenum, itemid, norm_method)
 
             # Write valuenum to the remainder of the appropriate row
-            img_row = common.itemid_2_imgrow[itemid]
+            img_row = common.item2feature[itemid]
             subject.img[img_row, hour:] = valuenum_norm
+
+    print(f"Skipped unknown items:")
+    for item in unknown_items:
+        print(item)
 
     for subject_id in patients:
         generate_image(patients[subject_id])
@@ -94,9 +102,11 @@ def normalize(valuenum: float, itemid: str, method: common.Norm_method) -> float
     """
     assert method in common.Norm_method
 
+    feature_id = common.item2feature[itemid]
+
     if method == common.Norm_method.MINMAX:
-        min = common.min_lut[itemid]
-        max = common.max_lut[itemid]
+        min = common.stats[feature_id][common.Stats_col.MIN]
+        max = common.stats[feature_id][common.Stats_col.MAX]
         return np.interp(valuenum, [min, max], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
     elif method == common.Norm_method.CUSTOM:
         raise NotImplementedError
@@ -114,17 +124,24 @@ def generate_image(subject: patient.Patient):
     img[:, :, 1] = subject.img
     img[:, :, 2] = subject.img
 
-    cv2.imwrite(os.path.join(os.getenv('IMAGES_DIR'), f"{subject.subject_id}.png"), img)
+    cv2.imwrite(os.path.join(os.getenv('IMAGES_DIR'), f"{subject.subject_id}{OUT_IMG_SUFFIX}.png"), img)
 
 if __name__ == "__main__":
     """
     Main section for when this file is invoked directly. Should only
     be used for debugging csv parsing down to image generation.
     """
+    # Store csv_filename, and fail if not supplied
     try:
         csv_file = sys.argv[1]
     except:
         print("Usage: python csv_to_images.py <csv_file>")
         raise
-    
+
+    # Store output image name suffix if supplied, but carry on if not
+    try:
+        OUT_IMG_SUFFIX = sys.argv[2]
+    except:
+        pass
+
     parse_csv_to_images(os.path.join(os.getenv('DATA_DIR'), csv_file))
