@@ -118,12 +118,25 @@ def normalize(valuenum: float, itemid: str, method: common.Norm_method) -> float
 
     feature_id = common.item2feature[itemid]
 
+    valuenum = apply_specific_transforms(valuenum, itemid)
+
     if method == common.Norm_method.MINMAX:
-        min = common.stats[feature_id][common.Stats_col.MIN]
-        max = common.stats[feature_id][common.Stats_col.MAX]
+        min = common.stats[feature_id][common.Stats_col.SOFTMIN]
+        max = common.stats[feature_id][common.Stats_col.SOFTMAX]
         return np.interp(valuenum, [min, max], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
     elif method == common.Norm_method.CUSTOM:
         raise NotImplementedError
+
+def apply_specific_transforms(valuenum: float, itemid: str) -> float:
+    """
+    Applies specific transforms based on medical data associated 
+    with given itemids. Configured based on clinical_variables.ods.
+    """
+    if itemid in [678,679,223761]:
+        # C to F
+        valuenum = (valuenum * 1.8) + 32
+
+    return valuenum
 
 def generate_images(patients: dict, test_split: float = 0.2, val_split: float = 0.3):
     """
