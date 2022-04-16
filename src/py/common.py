@@ -2,6 +2,10 @@
 
 from enum import Enum, IntEnum
 import numpy as np
+import pandas as pd
+import os
+from torch.utils.data import Dataset
+from torchvision.io import read_image
 
 # Constants as specified in the paper
 N_HOURS = 48
@@ -11,6 +15,9 @@ N_ROWS = 150
 # Normalization output range. Selected as [0,255] for openCV compatibility
 NORM_OUT_MIN = 0
 NORM_OUT_MAX = 255
+
+# Annotiations file name
+ANNOTATIONS_FILE_NAME = 'labels.csv'
 
 # Use to select Normalization Method for a given run
 class Norm_method(Enum):
@@ -30,6 +37,26 @@ class Stats_col(IntEnum):
     MEDIAN = 8
     N_COLS = 9
 
+# Class that defines image dataset
+class CustomImageDataset(Dataset):
+    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+        self.img_labels = pd.read_csv(annotations_file)
+        self.img_dir = img_dir
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.img_labels)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        image = read_image(img_path).float()
+        label = self.img_labels.iloc[idx, 1]
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
 
 # Mapping from itemid to unique feature id.
 # itemids come from MIMIC-III. Feature ids are used to amalgamate

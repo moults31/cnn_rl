@@ -26,7 +26,7 @@ pip install torch-geometric
 pip install torch-cluster -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 pip install torch-spline-conv -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
-pip install notebook nltk matplotlib gensim umap-learn opencv-python
+pip install notebook nltk matplotlib gensim umap-learn opencv-python scikit-learn
 ```
 #### When running in a new terminal:
 ```
@@ -49,3 +49,6 @@ Paste script into a PostgreSQL compatible GUI client, and then run each numbered
 * On subsequent runs, skip the `drop` lines at the top
 * To use a subset of the population for faster debug runs, modify the body of the `l.subject_id in (` block.
 
+##### cnn.py
+Make sure that you have images generated, and then:
+`python csv_to_images.py`

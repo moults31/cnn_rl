@@ -1,4 +1,4 @@
-from csv import reader
+from csv import reader, writer
 from typing import Tuple
 from datetime import datetime
 import os
@@ -42,6 +42,8 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
 
             # Compute the hour that this chart event happened at, relative to admission
             hour = compute_hour_diff(charttime, admittime)
+            if hour >= 48:
+                continue
 
             # Normalize valuenum
             valuenum_norm = normalize(valuenum, itemid, norm_method)
@@ -54,8 +56,7 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
     for item in unknown_items:
         print(item)
 
-    for subject_id in patients:
-        generate_image(patients[subject_id])
+    generate_images(patients)
 
 def cast_csv_row(row: list) -> Tuple[int, int, datetime, datetime, datetime, str, float, str, int]:
     """
@@ -88,7 +89,7 @@ def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
 
     # Verify that the number of hours falls in our allowable range
     assert diff >= 0
-    assert diff <= common.N_HOURS
+
     return diff
 
 def normalize(valuenum: float, itemid: str, method: common.Norm_method) -> float:
@@ -110,20 +111,49 @@ def normalize(valuenum: float, itemid: str, method: common.Norm_method) -> float
     elif method == common.Norm_method.CUSTOM:
         raise NotImplementedError
 
-def generate_image(subject: patient.Patient):
+def generate_images(patients: dict, test_split: float = 0.2, val_split: float = 0.3):
     """
     Generates an image for the given patient using OpenCV.
     Images are saved to IMAGES_DIR and named by subject_id.
     """
-    # Create 3-channel image
-    img = np.zeros((common.N_ROWS, common.N_COLS, 3), dtype=int)
 
-    # Populate it with patient timeline, duplicated in all 3 channels
-    img[:, :, 0] = subject.img
-    img[:, :, 1] = subject.img
-    img[:, :, 2] = subject.img
+    test_start_idx = len(patients) * (1 - val_split) * (1 - test_split)
+    val_start_idx = len(patients) * (1 - test_split)
 
-    cv2.imwrite(os.path.join(os.getenv('IMAGES_DIR'), f"{subject.subject_id}{OUT_IMG_SUFFIX}.png"), img)
+    i = 0
+    for subjectid in patients:
+        subject = patients[subjectid]
+
+        # Determine which split this patient will fall into and set the path accordingly.
+        # Todo: Add a feature for shuffling splits
+        img_path = os.getenv('IMAGES_DIR')
+        if i >= test_start_idx and i < val_start_idx:
+            img_path = os.path.join(img_path, 'test')
+        elif i >= val_start_idx:
+            img_path = os.path.join(img_path, 'val')
+        else:
+            img_path = os.path.join(img_path, 'train')
+
+        # Todo: Come up with a way to open in 'w' mode the first time we touch a file in a given run
+        with open(os.path.join(img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='') as f:
+            label_writer = writer(f, delimiter=',')
+
+            img_name = os.path.join(img_path, f"{subjectid}{OUT_IMG_SUFFIX}.png")
+            # Write label for this patient into labels.csv
+            line = [c.strip() for c in f"{os.path.basename(img_name)}, {subject.hospital_expire_flag}".strip(', ').split(',')]
+            label_writer.writerow(line)
+
+            # Create 3-channel image
+            img = np.zeros((common.N_ROWS, common.N_COLS, 3), dtype=int)
+
+            # Populate it with patient timeline, duplicated in all 3 channels
+            img[:, :, 0] = subject.img
+            img[:, :, 1] = subject.img
+            img[:, :, 2] = subject.img
+
+            cv2.imwrite(img_name, img)
+
+            i = i + 1
 
 if __name__ == "__main__":
     """
