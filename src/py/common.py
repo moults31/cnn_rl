@@ -38,7 +38,7 @@ class Stats_col(IntEnum):
     N = 9
     N_COLS = 10
 
-# Class that defines image dataset
+# Class that defines image dataset. Adapted from https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
 class CustomImageDataset(Dataset):
     def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
         self.img_labels = pd.read_csv(annotations_file)
@@ -51,7 +51,7 @@ class CustomImageDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path).float()
+        image = read_image(img_path).float()[0].unsqueeze(0)
         label = self.img_labels.iloc[idx, 1]
         if self.transform:
             image = self.transform(image)

@@ -8,11 +8,13 @@ import torch.nn.functional as F
 import time
 from sklearn.metrics import accuracy_score, roc_auc_score
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class StandardCNN(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
         super(StandardCNN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 4)
+        self.conv1 = nn.Conv2d(1, 32, 4)
         self.conv2 = nn.Conv2d(32, 64, 6)
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout1 = nn.Dropout(0.25)
@@ -35,11 +37,13 @@ def main():
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
     """
+    print(f"Running on CUDA device: {device}")
+
     # Load images and labels for each split
     train_loader, test_loader, val_loader = load_data()
 
     # Create and train the model
-    model = StandardCNN()
+    model = StandardCNN().to(device)
     model = train_cnn(model, train_loader)
 
     # Evaluate the model's predictions against the ground truth
@@ -72,8 +76,10 @@ def eval_model(model, test_loader, val_loader):
     Y_test = []
     Y_val = []
     for data, target in test_loader:
+        data = data.to(device)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
+        predictions = predictions.to('cpu')
         y_hat = outputs[:,1]
 
         Y_score_test = np.concatenate((Y_score_test, y_hat.to('cpu').detach().numpy()), axis=0)
@@ -81,13 +87,16 @@ def eval_model(model, test_loader, val_loader):
         Y_test.append(target)
 
     for data, target in val_loader:
+        data = data.to(device)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
+        predictions = predictions.to('cpu')
         y_hat = outputs[:,1]
         Y_score_val = np.concatenate((Y_score_val, y_hat.to('cpu').detach().numpy()), axis=0)
         Y_pred_val.append(predictions)
         Y_val.append(target)
 
+    print(type(Y_pred_test))
     Y_pred_test = np.concatenate(Y_pred_test, axis=0)
     Y_pred_val = np.concatenate(Y_pred_val, axis=0)
     Y_test = np.concatenate(Y_test, axis=0)
@@ -113,6 +122,9 @@ def train_cnn(model, train_dataloader, n_epoch=10):
         epoch_start_time = time.time()
         i = 0
         for data, target in train_dataloader:
+            # Transfer tensors to GPU
+            data, target = data.to(device), target.to(device)
+
             # zero the parameter gradients
             optimizer.zero_grad()
 
