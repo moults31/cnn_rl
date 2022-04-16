@@ -1,1 +1,3 @@
 data/*
+images/*
+src/py/__pycache__
