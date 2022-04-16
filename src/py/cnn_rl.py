@@ -7,29 +7,37 @@ import torch.nn as nn
 import torch.nn.functional as F
 import time
 from sklearn.metrics import accuracy_score, roc_auc_score
+import third_party.ConvLSTM_pytorch.convlstm as convLSTM
+from csv import writer
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-class StandardCNN(nn.Module):
+class CNN_RL(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
-        super(StandardCNN, self).__init__()
+        super(CNN_RL, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, 4)
         self.conv2 = nn.Conv2d(32, 64, 6)
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout1 = nn.Dropout(0.25)
-        self.fc1 = nn.Linear(90880, 2)
-        self.dropout2 = nn.Dropout(0.5)
+        self.convLSTM = convLSTM.ConvLSTM(64, 8, (3,3), 1, True, True, True)
+        self.fc1 = nn.Linear(11360, 2)
+        self.dropout2 = nn.Dropout(0.25)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = self.pool(x)
         x = self.dropout1(x)
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = x.unsqueeze(1)
+        x, h = self.convLSTM(x)
+        x = torch.stack(x)
+        x = torch.flatten(x, 2) # flatten all dimensions except batch
+        x = torch.squeeze(x, 0) # squeeze singleton dimension
         x = self.fc1(x)
+        x = F.relu(x)
         x = self.dropout2(x)
-        x = F.softmax(x)
+        x = F.softmax(x, dim=1)
         return x
 
 def main():
@@ -43,8 +51,8 @@ def main():
     train_loader, test_loader, val_loader = load_data()
 
     # Create and train the model
-    model = StandardCNN().to(device)
-    model = train_cnn(model, train_loader)
+    model = CNN_RL().to(device)
+    model = train_cnn_rl(model, train_loader)
 
     # Evaluate the model's predictions against the ground truth
     y_score_test, y_pred_test, y_test = eval_model(model, test_loader)
@@ -91,7 +99,7 @@ def eval_model(model, dataloader):
 
     return Y_score, Y_pred, Y_true
 
-def train_cnn(model, train_dataloader, n_epoch=2):
+def train_cnn_rl(model, train_dataloader, n_epoch=10):
     """
     :param model: A CNN model
     :param train_dataloader: the DataLoader of the training data
@@ -100,7 +108,7 @@ def train_cnn(model, train_dataloader, n_epoch=2):
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = 13.78 # Nominally 30, but this seems to balance CNN
+    class_weight_ratio = 550.0 # Nominally 30, but this seems to balance CNN-RL
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
@@ -108,6 +116,8 @@ def train_cnn(model, train_dataloader, n_epoch=2):
     # Assign LR=1e-3 taken from the paper
     optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-3)
 
+    # Assign decay 1e-6 as per the paper
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=range(n_epoch), gamma=1e-6)
     model.train() # prep model for training
 
     train_start_time = time.time()
@@ -127,6 +137,7 @@ def train_cnn(model, train_dataloader, n_epoch=2):
             loss = criterion(outputs, target)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             curr_epoch_loss.append(loss.cpu().data.numpy())
 

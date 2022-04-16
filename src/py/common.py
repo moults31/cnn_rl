@@ -4,8 +4,10 @@ from enum import Enum, IntEnum
 import numpy as np
 import pandas as pd
 import os
+import datetime
 from torch.utils.data import Dataset
 from torchvision.io import read_image
+from csv import writer
 
 # Constants as specified in the paper
 N_HOURS = 48
@@ -51,13 +53,25 @@ class CustomImageDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path).float()[0].unsqueeze(0)
+        image = read_image(img_path).float()[0].unsqueeze(0) / 255.0
         label = self.img_labels.iloc[idx, 1]
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(label)
         return image, label
+
+def dump_outputs(y_pred, y_true):
+    """
+    Generates a csv for quick viewing of predictions vs ground truth.
+    """
+    datetime_str = datetime.datetime.now().strftime("%Y%m%d%H%M")
+    with open(os.path.join(os.getenv('DATA_DIR'), f'output_{datetime_str}.csv'), 'a', newline='') as f:
+        out_writer = writer(f, delimiter=',')
+
+        for i in range(y_pred.shape[0]):
+            line = [c.strip() for c in f"{y_pred[i]}, {y_true[i]}".strip(', ').split(',')]
+            out_writer.writerow(line)
 
 # Mapping from itemid to unique feature id.
 # itemids come from MIMIC-III. Feature ids are used to amalgamate

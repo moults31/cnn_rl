@@ -1,0 +1,3 @@
+[submodule "src/py/third_party/ConvLSTM_pytorch"]
+	path = src/py/third_party/ConvLSTM_pytorch
+	url = https://github.com/ndrplz/ConvLSTM_pytorch.git

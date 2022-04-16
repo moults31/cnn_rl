@@ -1,3 +1,4 @@
 data/*
 images/*
 src/py/__pycache__
+src/py/third_party/__pycache__
