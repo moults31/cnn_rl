@@ -6,7 +6,7 @@ learning to predict mortality__ by Mayampurath et. al.
 
 ## Usage
 ### Setup
-Note that this repo is only tested on Ubuntu 20.04 or newer. For the CUDA environment variable, run `nvcc -V` to get the CUDA version that you have installed, and modify the 113 to match.
+Note that this repo is only tested on Ubuntu 20.04 or newer. For the CUDA environment variable, run `nvcc -V` to get the CUDA version that you have installed, and modify `cu113` to match your version.
 #### One-time setup:
 
 ```
@@ -54,4 +54,4 @@ Paste script into a PostgreSQL compatible GUI client, and then run each numbered
 
 ##### cnn.py
 Make sure that you have images generated, and then:
-`python csv_to_images.py`
+`python cnn.py`
