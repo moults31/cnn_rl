@@ -1,5 +1,4 @@
 from csv import reader
-from locale import normalize
 from typing import Tuple
 from datetime import datetime
 import os
