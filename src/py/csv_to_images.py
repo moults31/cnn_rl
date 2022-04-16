@@ -7,6 +7,7 @@ import patient
 import common
 import numpy as np
 import cv2
+import time
 
 # Optional suffix for output image name, use for debugging.
 OUT_IMG_SUFFIX = ''
@@ -19,6 +20,8 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
     patients = dict()
     unknown_items = list()
 
+    print(f"Parsing {csv_file}")
+    parse_start_time = time.time()
     with open(csv_file, 'r') as f:
         i = 0
         for row in reader(f):
@@ -52,11 +55,22 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
             img_row = common.item2feature[itemid]
             subject.img[img_row, hour:] = valuenum_norm
 
-    print(f"Skipped unknown items:")
-    for item in unknown_items:
-        print(item)
+            # Print progress indicator
+            if (i % 500000) == 0:
+                print('.', end='', flush=True)
+            i = i + 1
 
+    print("Parsing took {:.2f} sec".format(time.time() - parse_start_time))
+
+    if len(unknown_items) > 0:
+        print(f"Skipped unknown items:")
+        for item in unknown_items:
+            print(item)
+
+    print(f"Generating images")
+    gen_start_time = time.time()
     generate_images(patients)
+    print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
 
 def cast_csv_row(row: list) -> Tuple[int, int, datetime, datetime, datetime, str, float, str, int]:
     """

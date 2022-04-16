@@ -5,7 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.metrics import accuracy_score
+import time
+from sklearn.metrics import accuracy_score, roc_auc_score
 
 class StandardCNN(nn.Module):
     def __init__(self):
@@ -34,15 +35,24 @@ def main():
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
     """
+    # Load images and labels for each split
     train_loader, test_loader, val_loader = load_data()
+
+    # Create and train the model
     model = StandardCNN()
     model = train_cnn(model, train_loader)
 
-    y_pred_test, y_pred_val, y_test, y_val = eval_model(model, test_loader, val_loader)
+    # Evaluate the model's predictions against the ground truth
+    y_score_test, y_score_val, y_pred_test, y_pred_val, y_test, y_val = eval_model(model, test_loader, val_loader)
     acc_test = accuracy_score(y_test, y_pred_test)
     acc_val = accuracy_score(y_val, y_pred_val)
+    auc_test = roc_auc_score(y_test, y_score_test)
+    auc_val = roc_auc_score(y_val, y_score_val)
+
     print(("Test Accuracy: " + str(acc_test)))
     print(("Validation Accuracy: " + str(acc_val)))
+    print(("Test AUC: " + str(auc_test)))
+    print(("Validation AUC: " + str(auc_val)))
 
 def eval_model(model, test_loader, val_loader):
     """
@@ -55,6 +65,8 @@ def eval_model(model, test_loader, val_loader):
         Y_val: truth labels for the val set. Should be an numpy array of ints
     """
     model.eval()
+    Y_score_test = torch.FloatTensor()
+    Y_score_val = torch.FloatTensor()
     Y_pred_test = []
     Y_pred_val = []
     Y_test = []
@@ -62,14 +74,17 @@ def eval_model(model, test_loader, val_loader):
     for data, target in test_loader:
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
+        y_hat = outputs[:,1]
 
+        Y_score_test = np.concatenate((Y_score_test, y_hat.to('cpu').detach().numpy()), axis=0)
         Y_pred_test.append(predictions)
         Y_test.append(target)
 
     for data, target in val_loader:
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
-
+        y_hat = outputs[:,1]
+        Y_score_val = np.concatenate((Y_score_val, y_hat.to('cpu').detach().numpy()), axis=0)
         Y_pred_val.append(predictions)
         Y_val.append(target)
 
@@ -78,9 +93,9 @@ def eval_model(model, test_loader, val_loader):
     Y_test = np.concatenate(Y_test, axis=0)
     Y_val = np.concatenate(Y_val, axis=0)
 
-    return Y_pred_test, Y_pred_val, Y_test, Y_val
+    return Y_score_test, Y_score_val, Y_pred_test, Y_pred_val, Y_test, Y_val
 
-def train_cnn(model, train_dataloader, n_epoch=2):
+def train_cnn(model, train_dataloader, n_epoch=10):
     """
     :param model: A CNN model
     :param train_dataloader: the DataLoader of the training data
@@ -88,17 +103,19 @@ def train_cnn(model, train_dataloader, n_epoch=2):
     :return:
         model: trained model
     """
-    # Todo: Update these to match the paper
     criterion = torch.nn.modules.loss.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-3)
     model.train() # prep model for training
 
+    train_start_time = time.time()
     for epoch in range(n_epoch):
         curr_epoch_loss = []
+        epoch_start_time = time.time()
+        i = 0
         for data, target in train_dataloader:
             # zero the parameter gradients
             optimizer.zero_grad()
-            
+
             # forward + backward + optimize
             outputs = model(data)
             loss = criterion(outputs, target)
@@ -106,7 +123,16 @@ def train_cnn(model, train_dataloader, n_epoch=2):
             optimizer.step()
 
             curr_epoch_loss.append(loss.cpu().data.numpy())
-        print(f"Epoch {epoch}: curr_epoch_loss={np.mean(curr_epoch_loss)}")
+
+            # Print progress indicator
+            if (i % 10) == 0:
+                print('.', end='', flush=True)
+            i = i + 1
+        print(f"\nEpoch {epoch}: curr_epoch_loss={np.mean(curr_epoch_loss)}")
+        print("Epoch took {:.2f} sec".format(time.time() - epoch_start_time))
+
+    print("Training took {:.2f} sec".format(time.time() - train_start_time))
+
     return model
 
 def load_data(data_path: str = os.getenv('IMAGES_DIR')):
