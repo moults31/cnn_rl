@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 import datetime
+import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image
 from csv import writer
@@ -60,6 +61,24 @@ class CustomImageDataset(Dataset):
         if self.target_transform:
             label = self.target_transform(label)
         return image, label
+
+def load_data(batch_size = 128, data_path: str = os.getenv('IMAGES_DIR')):
+    '''
+    input
+     folder: str, 'train', 'val', or 'test'
+    output
+     number_normal: number of normal samples in the given folder
+     number_pneumonia: number of pneumonia samples in the given folder
+    '''
+    trainDataset = CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'train', ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'train'))
+    testDataset = CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'test', ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'test'))
+    valDataset = CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'val', ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'val'))
+
+    train_loader = torch.utils.data.DataLoader(trainDataset, batch_size=batch_size, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(testDataset, batch_size=batch_size, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(valDataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader, val_loader
 
 def dump_outputs(y_pred, y_true):
     """

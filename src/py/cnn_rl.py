@@ -48,7 +48,7 @@ def main():
     print(f"Running on CUDA device: {device}")
 
     # Load images and labels for each split
-    train_loader, test_loader, val_loader = load_data()
+    train_loader, test_loader, val_loader = common.load_data()
 
     # Create and train the model
     model = CNN_RL().to(device)
@@ -151,24 +151,6 @@ def train_cnn_rl(model, train_dataloader, n_epoch=10):
     print("Training took {:.2f} sec".format(time.time() - train_start_time))
 
     return model
-
-def load_data(data_path: str = os.getenv('IMAGES_DIR')):
-    '''
-    input
-     folder: str, 'train', 'val', or 'test'
-    output
-     number_normal: number of normal samples in the given folder
-     number_pneumonia: number of pneumonia samples in the given folder
-    '''
-    trainDataset = common.CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'train', common.ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'train'))
-    testDataset = common.CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'test', common.ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'test'))
-    valDataset = common.CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'val', common.ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'val'))
-
-    train_loader = torch.utils.data.DataLoader(trainDataset, batch_size=128, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(testDataset, batch_size=128, shuffle=False)
-    val_loader = torch.utils.data.DataLoader(valDataset, batch_size=128, shuffle=False)
-
-    return train_loader, test_loader, val_loader
 
 if __name__ == "__main__":
     """
