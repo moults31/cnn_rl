@@ -25,7 +25,10 @@ def parse_csv(csv_file: str):
             for itemid in itemids:
                 m_item2feature[int(itemid)] = featureid
 
-            m_stats[featureid, :] = row[4:]
+            if np.any(m_stats[featureid, :]):
+                print(f"Warning: Skipping duplicate row for featureid {featureid}")
+            else:
+                m_stats[featureid, :] = row[4:]
 
     print("item2feature = {")
     for key in m_item2feature:
