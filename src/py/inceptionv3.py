@@ -5,33 +5,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision import transforms
+from torchvision import transforms, models
 import time
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-class StandardCNN(nn.Module):
-    def __init__(self):
-        # Layer architecture taken from S2 Table in the paper
-        super(StandardCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 4)
-        self.conv2 = nn.Conv2d(32, 64, 6)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.dropout1 = nn.Dropout(0.25)
-        self.fc1 = nn.Linear(90880, 2)
-        self.dropout2 = nn.Dropout(0.5)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = self.pool(x)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = self.fc1(x)
-        x = self.dropout2(x)
-        x = F.softmax(x)
-        return x
 
 def run_tutorial():
     """
@@ -97,11 +75,10 @@ def main():
     train_loader, test_loader, val_loader = load_data()
 
     # Create and train the model
-    model = torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True)
+    model = models.Inception3(num_classes=2)
     model.to(device)
-    model.eval()
 
-    print(f"{type(model)}")
+    train_inceptionv3(model, train_loader)
 
     # Evaluate the model's predictions against the ground truth
     with torch.no_grad():
@@ -135,13 +112,13 @@ def eval_model(model, dataloader):
     Y_true = []
     i = 0
     for data, target in dataloader:
-        data = data.to(device)
         # Manipulate image to shape [batch, 3, 299, 299] that Inceptionv3 expects
         data = data.expand(data.shape[0], 3, data.shape[2], data.shape[3])
         preprocess = transforms.Compose([
             transforms.Resize(299),
         ])
         data = preprocess(data)
+        data = data.to(device)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
         predictions = predictions.to('cpu')
@@ -152,7 +129,7 @@ def eval_model(model, dataloader):
         Y_true.append(target)
 
         # Print progress indicator
-        if (i % 10) == 0:
+        if (i % 100) == 0:
             print('.', end='', flush=True)
         i = i + 1
 
@@ -161,22 +138,22 @@ def eval_model(model, dataloader):
 
     return Y_score, Y_pred, Y_true
 
-def train_cnn(model, train_dataloader, n_epoch=2):
+def train_inceptionv3(model, train_dataloader, n_epoch=40):
     """
-    :param model: A CNN model
+    :param model: An Inceptionv3 model
     :param train_dataloader: the DataLoader of the training data
     :param n_epoch: number of epochs to train
     :return:
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = 13.78 # Nominally 30, but this seems to balance CNN
+    class_weight_ratio = 30.0 # Nominally 30, but this seems to balance Inceptionv3
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
 
     # Assign LR=1e-3 taken from the paper
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=5e-2)
 
     model.train() # prep model for training
 
@@ -189,11 +166,19 @@ def train_cnn(model, train_dataloader, n_epoch=2):
             # Transfer tensors to GPU
             data, target = data.to(device), target.to(device)
 
+            # Manipulate image to shape [batch, 3, 299, 299] that Inceptionv3 expects
+            data = data.expand(data.shape[0], 3, data.shape[2], data.shape[3])
+            preprocess = transforms.Compose([
+                transforms.Resize(299),
+            ])
+            data = preprocess(data)
+
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
-            outputs = model(data)
+            data = data.to(device)
+            outputs, aux_output = model(data)
             loss = criterion(outputs, target)
             loss.backward()
             optimizer.step()
@@ -201,7 +186,7 @@ def train_cnn(model, train_dataloader, n_epoch=2):
             curr_epoch_loss.append(loss.cpu().data.numpy())
 
             # Print progress indicator
-            if (i % 10) == 0:
+            if (i % 100) == 0:
                 print('.', end='', flush=True)
             i = i + 1
         print(f"\nEpoch {epoch}: curr_epoch_loss={np.mean(curr_epoch_loss)}")
@@ -223,9 +208,9 @@ def load_data(data_path: str = os.getenv('IMAGES_DIR')):
     testDataset = common.CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'test', common.ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'test'))
     valDataset = common.CustomImageDataset(os.path.join(data_path, os.path.join(data_path, 'val', common.ANNOTATIONS_FILE_NAME)), os.path.join(data_path, 'val'))
 
-    train_loader = torch.utils.data.DataLoader(trainDataset, batch_size=32, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(testDataset, batch_size=32, shuffle=False)
-    val_loader = torch.utils.data.DataLoader(valDataset, batch_size=32, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(trainDataset, batch_size=16, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(testDataset, batch_size=16, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(valDataset, batch_size=16, shuffle=False)
 
     return train_loader, test_loader, val_loader
 
