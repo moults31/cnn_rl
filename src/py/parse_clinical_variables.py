@@ -19,6 +19,10 @@ def parse_csv(csv_file: str):
                 i = i + 1
                 continue
 
+            if row[3] == '':
+                print(f"Skipping featureid {row[2]} due to no itemids")
+                continue
+
             itemids = row[3].split(';')
             featureid = int(row[2])
 
