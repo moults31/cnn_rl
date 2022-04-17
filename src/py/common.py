@@ -10,6 +10,10 @@ from torch.utils.data import Dataset
 from torchvision.io import read_image
 from csv import writer
 
+# Globally define device as CUDA or CPU. Flip FORCE_CPU to True if you want precision over speed.
+FORCE_CPU = False
+device = torch.device("cuda:0" if (torch.cuda.is_available() and not FORCE_CPU) else "cpu")
+
 # Constants as specified in the paper
 N_HOURS = 48
 N_COLS = N_HOURS

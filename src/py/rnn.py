@@ -8,7 +8,6 @@ import torch.nn.functional as F
 import time
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class StandardRNN(nn.Module):
     def __init__(self):
@@ -40,13 +39,13 @@ def main():
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
     """
-    print(f"Running on CUDA device: {device}")
+    print(f"Running on CUDA device: {common.device}")
 
     # Load images and labels for each split
     train_loader, test_loader, val_loader = common.load_data()
 
     # Create and train the model
-    model = StandardRNN().to(device)
+    model = StandardRNN().to(common.device)
     model = train_rnn(model, train_loader)
 
     # Evaluate the model's predictions against the ground truth
@@ -79,7 +78,7 @@ def eval_model(model, dataloader):
     Y_pred = []
     Y_true = []
     for data, target in dataloader:
-        data = data.to(device).squeeze(1)
+        data = data.to(common.device).squeeze(1)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
         predictions = predictions.to('cpu')
@@ -105,7 +104,7 @@ def train_rnn(model, train_dataloader, n_epoch=20):
     # Assign class weights and create 2-class criterion
     class_weight_ratio = 13.78 # Nominally 30, but this seems to balance RNN
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
-    class_weights = torch.FloatTensor(weights).to(device)
+    class_weights = torch.FloatTensor(weights).to(common.device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
 
     # Assign LR=1e-3 taken from the paper
@@ -120,7 +119,7 @@ def train_rnn(model, train_dataloader, n_epoch=20):
         i = 0
         for data, target in train_dataloader:
             # Transfer tensors to GPU
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(common.device), target.to(common.device)
             data = data.squeeze(1)
 
             # zero the parameter gradients

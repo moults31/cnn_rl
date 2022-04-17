@@ -10,8 +10,6 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 import third_party.ConvLSTM_pytorch.convlstm as convLSTM
 from csv import writer
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 class CNN_RL(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
@@ -45,13 +43,13 @@ def main():
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
     """
-    print(f"Running on CUDA device: {device}")
+    print(f"Running on CUDA device: {common.device}")
 
     # Load images and labels for each split
     train_loader, test_loader, val_loader = common.load_data()
 
     # Create and train the model
-    model = CNN_RL().to(device)
+    model = CNN_RL().to(common.device)
     model = train_cnn_rl(model, train_loader)
 
     # Evaluate the model's predictions against the ground truth
@@ -84,7 +82,7 @@ def eval_model(model, dataloader):
     Y_pred = []
     Y_true = []
     for data, target in dataloader:
-        data = data.to(device)
+        data = data.to(common.device)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
         predictions = predictions.to('cpu')
@@ -110,7 +108,7 @@ def train_cnn_rl(model, train_dataloader, n_epoch=10):
     # Assign class weights and create 2-class criterion
     class_weight_ratio = 550.0 # Nominally 30, but this seems to balance CNN-RL
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
-    class_weights = torch.FloatTensor(weights).to(device)
+    class_weights = torch.FloatTensor(weights).to(common.device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
 
     # Assign LR=1e-3 taken from the paper
@@ -127,7 +125,7 @@ def train_cnn_rl(model, train_dataloader, n_epoch=10):
         i = 0
         for data, target in train_dataloader:
             # Transfer tensors to GPU
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(common.device), target.to(common.device)
 
             # zero the parameter gradients
             optimizer.zero_grad()

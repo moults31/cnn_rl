@@ -9,8 +9,6 @@ from torchvision import transforms, models
 import time
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 def run_tutorial():
     """
     Inceptionv3 tutorial to sanity check local environment.
@@ -69,14 +67,14 @@ def main():
     Creates a model, trains it, and evaluates it against test set and val set.
     Adapted from https://pytorch.org/hub/pytorch_vision_inception_v3
     """
-    print(f"Running on CUDA device: {device}")
+    print(f"Running on CUDA common.device: {common.device}")
 
     # Load images and labels for each split
-    train_loader, test_loader, val_loader = common.load_data()
+    train_loader, test_loader, val_loader = common.load_data(batch_size=16)
 
     # Create and train the model
     model = models.Inception3(num_classes=2)
-    model.to(device)
+    model.to(common.device)
 
     train_inceptionv3(model, train_loader)
 
@@ -118,7 +116,7 @@ def eval_model(model, dataloader):
             transforms.Resize(299),
         ])
         data = preprocess(data)
-        data = data.to(device)
+        data = data.to(common.device)
         outputs = model(data)
         _, predictions = torch.max(outputs, 1)
         predictions = predictions.to('cpu')
@@ -149,7 +147,7 @@ def train_inceptionv3(model, train_dataloader, n_epoch=40):
     # Assign class weights and create 2-class criterion
     class_weight_ratio = 21.0 # Nominally 30, but this seems to balance Inceptionv3
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
-    class_weights = torch.FloatTensor(weights).to(device)
+    class_weights = torch.FloatTensor(weights).to(common.device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
 
     # Assign LR=1e-3 taken from the paper
@@ -164,7 +162,7 @@ def train_inceptionv3(model, train_dataloader, n_epoch=40):
         i = 0
         for data, target in train_dataloader:
             # Transfer tensors to GPU
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(common.device), target.to(common.device)
 
             # Manipulate image to shape [batch, 3, 299, 299] that Inceptionv3 expects
             data = data.expand(data.shape[0], 3, data.shape[2], data.shape[3])
@@ -177,7 +175,7 @@ def train_inceptionv3(model, train_dataloader, n_epoch=40):
             optimizer.zero_grad()
 
             # forward + backward + optimize
-            data = data.to(device)
+            data = data.to(common.device)
             outputs, aux_output = model(data)
             loss = criterion(outputs, target)
             loss.backward()
