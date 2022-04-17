@@ -2,7 +2,6 @@ from os import stat
 import numpy as np
 import common
 import torch
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_recall_fscore_support
 from scipy.interpolate import UnivariateSpline
 
 
@@ -20,21 +19,12 @@ def main():
     mews_pred_val, mews_true_val = compute_mews(val_loader)
 
     # Evaluate the scores' predictions against the ground truth
-    acc_test = accuracy_score(mews_true_test, mews_pred_test)
-    acc_val = accuracy_score(mews_pred_val, mews_true_val)
-    auc_test = roc_auc_score(mews_true_test, mews_pred_test)
-    auc_val = roc_auc_score(mews_true_val, mews_pred_val)
-    p, r, f, _ = precision_recall_fscore_support(mews_true_val, mews_pred_val, average='binary')
+    print("\nScores from test split:")
+    common.evaluate_predictions(mews_true_test, mews_pred_test, score=mews_pred_test)
+    print("\nScores from val split:")
+    common.evaluate_predictions(mews_true_val, mews_pred_val, score=mews_pred_val)
 
-    print(("Test Accuracy: " + str(acc_test)))
-    print(("Validation Accuracy: " + str(acc_val)))
-    print(("Test AUC: " + str(auc_test)))
-    print(("Validation AUC: " + str(auc_val)))
-
-    print(f"Val precision {p}")
-    print(f"Val recall {r}")
-    print(f"Val fscore {f}")
-
+    # Dump val split truth/preds for manual inspection
     common.dump_outputs(mews_pred_val, mews_true_val)
 
 def compute_mews(dataloader):

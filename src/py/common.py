@@ -9,10 +9,18 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image
 from csv import writer
+from sklearn.metrics import accuracy_score, roc_auc_score, precision_recall_fscore_support
 
 # Globally define device as CUDA or CPU. Flip FORCE_CPU to True if you want precision over speed.
 FORCE_CPU = False
 device = torch.device("cuda:0" if (torch.cuda.is_available() and not FORCE_CPU) else "cpu")
+
+# Global switch to force all models to use GLOBAL_CLASS_WEIGHT_RATIO instead of their tuned one
+FORCE_CLASS_WEIGHT = True
+CLASS_WEIGHT_RATIO = 30.0
+
+# Default number of epochs. Can be overriden in calls to train_<model>
+N_EPOCH = 20
 
 # Constants as specified in the paper
 N_HOURS = 48
@@ -132,6 +140,21 @@ def dump_outputs(y_pred, y_true):
         for i in range(y_pred.shape[0]):
             line = [c.strip() for c in f"{y_pred[i]}, {y_true[i]}".strip(', ').split(',')]
             out_writer.writerow(line)
+
+def evaluate_predictions(truth, preds, score=None, average='binary'):
+    # Evaluate the scores' predictions against the ground truth
+    acc = accuracy_score(truth, preds)
+    p, r, f, _ = precision_recall_fscore_support(truth, preds, average=average)
+
+    if score is not None:
+        auc = roc_auc_score(truth, score)
+
+    print(("Accuracy: " + str(acc)))
+    if score is not None:
+        print(("AUC: " + str(auc)))
+    print(f"Precision {p}")
+    print(f"Recall {r}")
+    print(f"FScore {f}")
 
 # Mapping from itemid to unique feature id.
 # itemids come from MIMIC-III. Feature ids are used to amalgamate

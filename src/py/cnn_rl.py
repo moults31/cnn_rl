@@ -38,7 +38,7 @@ class CNN_RL(nn.Module):
         x = F.softmax(x, dim=1)
         return x
 
-def main():
+def main(n_epoch=common.N_EPOCH):
     """
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
@@ -50,20 +50,17 @@ def main():
 
     # Create and train the model
     model = CNN_RL().to(common.device)
-    model = train_cnn_rl(model, train_loader)
+    model = train_cnn_rl(model, train_loader, n_epoch)
 
     # Evaluate the model's predictions against the ground truth
     y_score_test, y_pred_test, y_test = eval_model(model, test_loader)
     y_score_val, y_pred_val, y_val = eval_model(model, val_loader)
-    acc_test = accuracy_score(y_test, y_pred_test)
-    acc_val = accuracy_score(y_val, y_pred_val)
-    auc_test = roc_auc_score(y_test, y_score_test)
-    auc_val = roc_auc_score(y_val, y_score_val)
 
-    print(("Test Accuracy: " + str(acc_test)))
-    print(("Validation Accuracy: " + str(acc_val)))
-    print(("Test AUC: " + str(auc_test)))
-    print(("Validation AUC: " + str(auc_val)))
+    # Evaluate the scores' predictions against the ground truth
+    print("\nScores from test split:")
+    common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
+    print("\nScores from val split:")
+    common.evaluate_predictions(y_val, y_pred_val, score=y_score_val)
 
     common.dump_outputs(y_pred_val, y_val)
 
@@ -97,7 +94,7 @@ def eval_model(model, dataloader):
 
     return Y_score, Y_pred, Y_true
 
-def train_cnn_rl(model, train_dataloader, n_epoch=10):
+def train_cnn_rl(model, train_dataloader, n_epoch=common.N_EPOCH):
     """
     :param model: A CNN model
     :param train_dataloader: the DataLoader of the training data
@@ -106,7 +103,8 @@ def train_cnn_rl(model, train_dataloader, n_epoch=10):
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = 550.0 # Nominally 30, but this seems to balance CNN-RL
+    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 550.0
+    print(f"Class weight ratio: {class_weight_ratio}")
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(common.device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
