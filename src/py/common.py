@@ -26,11 +26,12 @@ NORM_OUT_MAX = 255
 # Annotiations file name
 ANNOTATIONS_FILE_NAME = 'labels.csv'
 
-# Use to select Normalization Method for a given run
+# Use to select Normalization Method globally
 class Norm_method(Enum):
     MINMAX = 1
-    CUSTOM = 2
-NORM_METHOD = Norm_method.MINMAX
+    SOFTMINMAX = 2
+    CUSTOM = 3
+NORM_METHOD = Norm_method.SOFTMINMAX
 
 # Used for indexing columns by name in stats
 class Stats_col(IntEnum):
@@ -45,6 +46,10 @@ class Stats_col(IntEnum):
     MEDIAN = 8
     N = 9
     N_COLS = 10
+
+# Macro to use either true min/max or soft min/max globally, based on norm_method
+STATSCOL_MAYBESOFTMIN = Stats_col.SOFTMIN if (NORM_METHOD == Norm_method.SOFTMINMAX) else Stats_col.MIN
+STATSCOL_MAYBESOFTMAX = Stats_col.SOFTMAX if (NORM_METHOD == Norm_method.SOFTMINMAX) else Stats_col.MAX
 
 # Class that defines image dataset. Adapted from https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
 class CustomImageDataset(Dataset):
@@ -98,9 +103,9 @@ def normalize(valuenum: float, feature_id: int, method: Norm_method, item_id = N
     if item_id is not None:
         valuenum = apply_specific_transforms(valuenum, item_id)
 
-    if method == Norm_method.MINMAX:
-        min = stats[feature_id][Stats_col.SOFTMIN]
-        max = stats[feature_id][Stats_col.SOFTMAX]
+    if (method == Norm_method.MINMAX) or (method == Norm_method.SOFTMINMAX):
+        min = stats[feature_id][STATSCOL_MAYBESOFTMIN]
+        max = stats[feature_id][STATSCOL_MAYBESOFTMAX]
         return np.interp(valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX])
     elif method == Norm_method.CUSTOM:
         raise NotImplementedError

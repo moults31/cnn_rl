@@ -51,18 +51,18 @@ def compute_mews(dataloader):
         # Respiratory rate
         feature_id = 8
         bounds = [
-            common.stats[feature_id, common.Stats_col.SOFTMIN],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMIN],
             8, 9, 15, 21, 30,
-            common.stats[feature_id, common.Stats_col.SOFTMAX],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX],
         ]
         scores = mews_compute_row(data, feature_id, bounds)
 
         # Heart rate
         feature_id = 7
         bounds = [
-            common.stats[feature_id, common.Stats_col.SOFTMIN],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMIN],
             40, 51, 101, 111, 129,
-            common.stats[feature_id, common.Stats_col.SOFTMAX],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX],
         ]
         scores = scores + mews_compute_row(data, feature_id, bounds)
 
@@ -70,8 +70,8 @@ def compute_mews(dataloader):
         feature_id = 9
         bounds = [
             70, 81, 101, 200, 201, 
-            common.stats[feature_id, common.Stats_col.SOFTMAX],
-            common.stats[feature_id, common.Stats_col.SOFTMAX],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX],
         ]
         scores = scores + mews_compute_row(data, feature_id, bounds)
 
@@ -80,10 +80,10 @@ def compute_mews(dataloader):
         # Temperature (C)
         feature_id = 6
         bounds = [
-            common.stats[feature_id, common.Stats_col.SOFTMIN],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMIN],
             35.0, 36.1, 38.1, 38.6,
-            common.stats[feature_id, common.Stats_col.SOFTMAX],
-            common.stats[feature_id, common.Stats_col.SOFTMAX],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX],
+            common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX],
         ]
         scores = scores + mews_compute_row(data, feature_id, bounds)
 
@@ -133,7 +133,7 @@ def mews_get_score_from_bounds(data, feature_id, bounds):
         for hour in range(data.shape[2]):
             score = 0
             for i in range(len(bounds)):
-                if data[sample, 0, hour] == common.stats[feature_id, common.Stats_col.SOFTMIN]:
+                if data[sample, 0, hour] == common.stats[feature_id, common.STATSCOL_MAYBESOFTMIN]:
                     # This was a zeroed-out pixel, so we can't assign a score for it
                     continue
 
@@ -208,9 +208,9 @@ def get_spl_x_y(feature_id: int):
     Helper function for 1d linear extrapolating the 
     normalized values for a given feature back to their original bounds 
     """
-    if common.NORM_METHOD == common.Norm_method.MINMAX:
+    if (common.NORM_METHOD == common.Norm_method.MINMAX) or (common.NORM_METHOD == common.Norm_method.SOFTMINMAX):
         x = [0.0, 1.0]
-        y = [common.stats[feature_id, common.Stats_col.SOFTMIN], common.stats[feature_id, common.Stats_col.SOFTMAX]]
+        y = [common.stats[feature_id, common.STATSCOL_MAYBESOFTMIN], common.stats[feature_id, common.STATSCOL_MAYBESOFTMAX]]
         spl = UnivariateSpline(x, y, k=1)
     else:
         raise NotImplementedError

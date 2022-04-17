@@ -12,7 +12,7 @@ import time
 # Optional suffix for output image name, use for debugging.
 OUT_IMG_SUFFIX = ''
 
-def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.Norm_method.MINMAX):
+def parse_csv_to_images(csv_file: str):
     """
     Top-level function that loads the provided 
     csv and saves images to disk as png.
@@ -52,7 +52,7 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
             feature_id = common.item2feature[itemid]
 
             # Normalize valuenum
-            valuenum_norm = common.normalize(valuenum, feature_id, norm_method, itemid)
+            valuenum_norm = common.normalize(valuenum, feature_id, common.NORM_METHOD, itemid)
 
             # Write valuenum to the remainder of the appropriate row
             subject.img[feature_id, hour:] = valuenum_norm
