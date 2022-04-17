@@ -48,12 +48,14 @@ def parse_csv_to_images(csv_file: str, norm_method: common.Norm_method = common.
             if hour >= 48:
                 continue
 
+            # Lookup Feature ID
+            feature_id = common.item2feature[itemid]
+
             # Normalize valuenum
-            valuenum_norm = normalize(valuenum, itemid, norm_method)
+            valuenum_norm = common.normalize(valuenum, feature_id, norm_method, itemid)
 
             # Write valuenum to the remainder of the appropriate row
-            img_row = common.item2feature[itemid]
-            subject.img[img_row, hour:] = valuenum_norm
+            subject.img[feature_id, hour:] = valuenum_norm
 
             # Print progress indicator
             if (i % 500000) == 0:
@@ -106,38 +108,6 @@ def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
 
     return diff
 
-def normalize(valuenum: float, itemid: str, method: common.Norm_method) -> float:
-    """
-    Normalizes valuenum using the specified normalization method.
-    MINMAX linearly interpolates the value within NORM_OUT_MIN and NORM_OUT_MAX.
-    CUSTOM uses medical knowledge to assign a value 
-    between NORM_OUT_MIN and NORM_OUT_MAX where higher is healthier.
-    For more info see the paper.
-    """
-    assert method in common.Norm_method
-
-    feature_id = common.item2feature[itemid]
-
-    valuenum = apply_specific_transforms(valuenum, itemid)
-
-    if method == common.Norm_method.MINMAX:
-        min = common.stats[feature_id][common.Stats_col.SOFTMIN]
-        max = common.stats[feature_id][common.Stats_col.SOFTMAX]
-        return np.interp(valuenum, [min, max], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
-    elif method == common.Norm_method.CUSTOM:
-        raise NotImplementedError
-
-def apply_specific_transforms(valuenum: float, itemid: str) -> float:
-    """
-    Applies specific transforms based on medical data associated 
-    with given itemids. Configured based on clinical_variables.ods.
-    """
-    if itemid in [678,679,223761]:
-        # C to F
-        valuenum = (valuenum * 1.8) + 32
-
-    return valuenum
-
 def generate_images(patients: dict, test_split: float = 0.2, val_split: float = 0.3):
     """
     Generates an image for the given patient using OpenCV.
@@ -174,6 +144,7 @@ def generate_images(patients: dict, test_split: float = 0.2, val_split: float = 
             img = np.zeros((common.N_ROWS, common.N_COLS, 3), dtype=int)
 
             # Populate it with patient timeline, duplicated in all 3 channels
+            subject.img = subject.img
             img[:, :, 0] = subject.img
             img[:, :, 1] = subject.img
             img[:, :, 2] = subject.img

@@ -30,6 +30,7 @@ ANNOTATIONS_FILE_NAME = 'labels.csv'
 class Norm_method(Enum):
     MINMAX = 1
     CUSTOM = 2
+NORM_METHOD = Norm_method.MINMAX
 
 # Used for indexing columns by name in stats
 class Stats_col(IntEnum):
@@ -83,6 +84,37 @@ def load_data(batch_size = 128, data_path: str = os.getenv('IMAGES_DIR')):
     val_loader = torch.utils.data.DataLoader(valDataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader, val_loader
+
+def normalize(valuenum: float, feature_id: int, method: Norm_method, item_id = None) -> float:
+    """
+    Normalizes valuenum using the specified normalization method.
+    MINMAX linearly interpolates the value within NORM_OUT_MIN and NORM_OUT_MAX.
+    CUSTOM uses medical knowledge to assign a value 
+    between NORM_OUT_MIN and NORM_OUT_MAX where higher is healthier.
+    For more info see the paper.
+    """
+    assert method in Norm_method
+
+    if item_id is not None:
+        valuenum = apply_specific_transforms(valuenum, item_id)
+
+    if method == Norm_method.MINMAX:
+        min = stats[feature_id][Stats_col.SOFTMIN]
+        max = stats[feature_id][Stats_col.SOFTMAX]
+        return np.interp(valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX])
+    elif method == Norm_method.CUSTOM:
+        raise NotImplementedError
+
+def apply_specific_transforms(valuenum: float, itemid: str) -> float:
+    """
+    Applies specific transforms based on medical data associated 
+    with given itemids. Configured based on clinical_variables.ods.
+    """
+    if itemid in [678,679,223761]:
+        # C to F
+        valuenum = (valuenum * 1.8) + 32
+
+    return valuenum
 
 def dump_outputs(y_pred, y_true):
     """

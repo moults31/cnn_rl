@@ -136,7 +136,7 @@ def eval_model(model, dataloader):
 
     return Y_score, Y_pred, Y_true
 
-def train_inceptionv3(model, train_dataloader, n_epoch=40):
+def train_inceptionv3(model, train_dataloader, n_epoch=5):
     """
     :param model: An Inceptionv3 model
     :param train_dataloader: the DataLoader of the training data
@@ -145,7 +145,7 @@ def train_inceptionv3(model, train_dataloader, n_epoch=40):
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = 21.0 # Nominally 30, but this seems to balance Inceptionv3
+    class_weight_ratio = 20.0 # Nominally 30, but this seems to balance Inceptionv3
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(common.device)
     criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
