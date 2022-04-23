@@ -68,7 +68,7 @@ with patient_ids as (
 	) union (
 	
 		-- prior history of cardiace arrest (experienced in ICU)
-		select a.subject_id, a.hadm_id, p.itemid, a.admittime, p.starttime, 0 as var_type, (case when p.value is null or p.value <> 1 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag 
+		select a.subject_id, a.hadm_id, 3 as itemid, a.admittime, p.starttime, 0 as var_type, (case when p.value is null or p.value <> 1 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag 
 		from mimic_core.admissions a join mimic_icu.procedureevents p 
 		on a.subject_id = p.subject_id 
 		where a.hadm_id is not null 
