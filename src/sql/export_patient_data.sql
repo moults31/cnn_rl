@@ -1,8 +1,18 @@
 /****************************************************************************
  * MIMIC-IV data extraction script for combining timelines to predict patient mortality
  * 
+ * This script aggregates the necessary data comprising the clinical variables used in the timelines.
+ * In many cases, the data must be converted to a different format (normalized to [0...1], for example).
+ *
+ * Not all clinical variables have significant representation, or are located in easy to access places.
+ * Best guesses and compromises were employed when necessary.
+ * 
+ * For variables with many idiomatic representations, or requiring lots of special case code to handle,
+ * data is dumped verbatim and left for the parser to figure out as other languages
+ * may be more suited to the task.
+ * 
  * Author: Matthew Lind
- * Date: April 17, 2022
+ * Date: April 23, 2022
  ****************************************************************************/
 -- set schema
 set search_path to mimic_iv;
@@ -16,11 +26,128 @@ with patient_ids as (
 	from mimic_core.admissions a
 	where extract( epoch from age( a.dischtime, a.admittime ) ) >= 172800
 --	and subject_id between 10000000 and 10100000
+	
+), patient_chars as (
+
+	/**************************************
+	 * Patient characteristics - age, sex, race, ...
+	 **********************************************/
+	(
+		-- age (normalized to range 0...100)
+		select p.subject_id, a.hadm_id, 0 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", p.anchor_age as val_num, 0 as val_min, 100 as val_max, 0 as ref_min, 91 as ref_max, 0 as val_default, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_core.patients p 
+		on a.subject_id = p.subject_id 
+		where a.hadm_id is not null
+		and p.subject_id in (
+			select *
+			from patient_ids
+		)
+		
+	) union (
+		-- sex/gender (0=male, 1=female/other)
+		select p.subject_id, a.hadm_id, 1 as itemid, a.admittime, a.admittime as charttime, 0 as "var_type", (case when p.gender = 'M' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_core.patients p 
+		on a.subject_id = p.subject_id 
+		where a.hadm_id is not null
+		and p.subject_id in (
+			select *
+			from patient_ids
+		)
+		
+	) union (
+		-- race (0=black/african american, 1=other)
+		select p.subject_id, a.hadm_id, 2 as itemid, a.admittime, a.admittime as charttime, 0 as "var_type", (case when a.ethnicity = 'BLACK/AFRICAN AMERICAN' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_core.patients p 
+		on a.subject_id = p.subject_id 
+		where a.hadm_id is not null
+		and p.subject_id in (
+			select *
+			from patient_ids
+		)
+		
+	) union (
+	
+		-- prior history of cardiace arrest (experienced in ICU)
+		select a.subject_id, a.hadm_id, p.itemid, a.admittime, p.starttime, 0 as var_type, (case when p.value is null or p.value <> 1 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag 
+		from mimic_core.admissions a join mimic_icu.procedureevents p 
+		on a.subject_id = p.subject_id 
+		where a.hadm_id is not null 
+		and p.itemid = 225466 
+		and p.subject_id in (
+			select *
+			from patient_ids
+		)		
+		and extract( epoch from age( a.admittime, p.starttime )) >= 0
+		
+	) union (
+		-- prior hospital admissions within past 90 days (this could certainly be optimized)
+	
+		with tmp as (
+		
+			-- get patient data from admissions table. Convert admittime to epoch time for easier math
+			select a.subject_id, a.hadm_id, a.admittime, extract( epoch from a.admittime ) as time, a.hospital_expire_flag 
+			from mimic_core.admissions a 
+			where a.subject_id in (
+				select *
+				from patient_ids
+			)
+			order by a.admittime asc
+			
+		), time_diff as (
+		
+			-- compute difference between current admission and previous admission, for same patient
+			select t.subject_id, t.hadm_id, t.admittime, t.time,
+				lag( t.time )
+					over ( partition by t.subject_id order by t.time ) as prev_time,
+				-- NOTE: subtracting 90 here so downstream comparisons only need to check > 0.
+				floor( (t.time - lag( t.time ) over ( partition by t.subject_id order by t.time )) / 86400) - 90 as diff,
+				t.hospital_expire_flag
+			from tmp t
+			order by t.time asc
+		)
+		-- assess results and flag all prior admissions within 90 days
+		select t.subject_id, t.hadm_id, 4 as itemid, t.admittime, t.admittime as charttime, 0 as var_type, (case when t.diff is null or t.diff > 0 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, t.hospital_expire_flag
+		from time_diff t
+--		order by t.subject_id asc, t.admittime asc
+	
+	) union (
+		-- hour of day.  compute hour of day in military time upon admission to hospital.  This must be incremented hourly for first 48 hours of the visit.
+		select p.subject_id, a.hadm_id, 5 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", (extract( hour from a.admittime)) as val_num, 0 as val_min, 23 as val_max, 0 as ref_min, 23 as ref_max, 0 as val_default, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_core.patients p 
+		on a.subject_id = p.subject_id 
+		where a.hadm_id is not null
+		and p.subject_id in (
+			select *
+			from patient_ids
+		)
+	) union (
+		-- patient admission type (degree of severity/urgency).  Mimic's concept of location is not the same as university of chicago, and therefore not useful.
+		select p.subject_id, a.hadm_id, 6 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", 
+		(case 
+			when a.admission_type = 'ELECTIVE' then 1
+			when a.admission_type = 'OBSERVATION ADMIT' then 2
+			when a.admission_type = 'DIRECT OBSERVATION' then 3
+			when a.admission_type = 'AMBULATORY OBSERVATION' then 4
+			when a.admission_type = 'EU OBSERVATION' then 5
+			when a.admission_type = 'SURGICAL SAME DAY ADMISSION' then 6
+			when a.admission_type = 'URGENT' then 7
+			when a.admission_type = 'DIRECT EMER.' then 8
+			when a.admission_type = 'EW EMER.' then 9
+			else 0 end
+		) as val_num, 0 as val_min, 9 as val_max, 1 as ref_min, 9 as ref_max, 0 as val_default, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_core.patients p 
+		on a.subject_id = p.subject_id 
+		where a.hadm_id is not null
+		and p.subject_id in (
+			select *
+			from patient_ids
+		)
+	)
 
 ), chart_events as (
 
 	/******************************************
-	 * Vital signs and interventions - ICU events
+	 * Vital signs and interventions - ICU charted events
 	 *******************************************/
 	( 
 		-- consider adding 'warning' field
@@ -78,8 +205,7 @@ with patient_ids as (
 	 * Labs - recorded events for blood tests, urine, cultures, ...
 	 *****************************************************/
 	(
-		-- special case: 51484=ketones (urine).  Many of the records have NULL valuenum and reference ranges.
-		-- need to explicitly cast values to comply with everything else.
+		-- special case: 51484=ketones (urine).  Many of the records have NULL valuenum and reference ranges.  Must explicitly cast values to comply with everything else.
 		select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, 2 as "var_type", (case when l.valuenum is null then 0 else l.valuenum end) as val_num, 0 as val_min, 160 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_hosp.labevents l
 		on a.subject_id = l.subject_id 
@@ -275,6 +401,9 @@ with patient_ids as (
 	 * MERGE subquery results
 	 *********************************/
 	(
+		select *
+		from patient_chars
+	) union (
 		select *
 		from labs
 --	) union (
