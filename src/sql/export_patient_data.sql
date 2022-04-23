@@ -22,462 +22,157 @@ with val_defaults as (
 	/*****************************************************************
 	 * default values and reference ranges for clinical variables
 	 *****************************************************************/
-	--
 	-- Patient characteristics --
-	-- 
-	(
-		-- age
-		select 0 pid, 0 rid, 0 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 91 val_max, 0 ref_min, 91 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- sex/gender
-		select 0 pid, 1 rid, 1 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- ethnicity
-		select 0 pid, 2 rid, 2 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- previous cardiac arrest
-		select 0 pid, 3 rid, 3 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- prior admission to hospital within previous 90 days.
-		select 0 pid, 4 rid, 4 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- hour of day
-		select 0 pid, 5 rid, 5 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 23 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- patient health severity (was patient location)
-		select 0 pid, 6 rid, 6 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 9 val_max, 0 ref_min, 9 ref_max, 0 val_default, 0 hospital_expire_flag
-	--
+	(		  select 0 pid, 0 rid, 0 itemid, 2 var_type, 0 val_num, 0 val_min, 91 val_max, 0 ref_min, 91 ref_max, 0 val_default 	-- age
+	) union ( select 0 pid, 1 rid, 1 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- sex/gender
+	) union ( select 0 pid, 2 rid, 2 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- ethnicity
+	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
+	) union ( select 0 pid, 4 rid, 4 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- prior admission to hospital within previous 90 days.
+	) union ( select 0 pid, 5 rid, 5 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 23 ref_max, 0 val_default		-- hour of day
+	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 9 val_max, 0 ref_min, 9 ref_max, 0 val_default		-- patient health severity (was patient location)
 	-- vital signs (mimic_icu.chartevents)	
-	--	
-	) union (
-		-- temperature C
-		select 0 pid, 7 rid, 223762 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 27 val_min, 42 val_max, 36.1 ref_min, 37.2 ref_max, 37 val_default, 0 hospital_expire_flag
-	) union (
-		-- temperature F
-		select 0 pid, 7 rid, 223761 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 90 val_min, 106 val_max, 97 ref_min, 99 ref_max, 98.6 val_default, 0 hospital_expire_flag
-	) union (
-		-- heart rate
-		select 0 pid, 8 rid, 220045 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 25 val_min, 230 val_max, 60 ref_min, 100 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- respiratory rate
-		select 0 pid, 9 rid, 220210 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 100 val_max, 12 ref_min, 20 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- blood pressure, systolic 1
-		select 0 pid, 10 rid, 220179 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- blood pressure, systolic 2
-		select 0 pid, 10 rid, 220050 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- blood pressure, diastolic 1
-		select 0 pid, 11 rid, 220180 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- blood pressure, diastolic 2
-		select 0 pid, 11 rid, 220051 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- O2 saturation 1
-		select 0 pid, 12 rid, 220277 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- O2 saturation 2
-		select 0 pid, 12 rid, 228232 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Fraction of inspired Oxygen (Fi02)
-		select 0 pid, 13 rid, 223835 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Conscious level (AVPU)
-		select 0 pid, 14 rid, 226104 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-
-	--
+	) union ( select 0 pid, 7 rid, 223762 itemid, 2 var_type, 37.0 val_num, 27 val_min, 42 val_max, 36.1 ref_min, 37.2 ref_max, 37 val_default		-- temperature C
+	) union ( select 0 pid, 7 rid, 223761 itemid, 2 var_type, 98.6 val_num, 90 val_min, 106 val_max, 97 ref_min, 99 ref_max, 98.6 val_default		-- temperature F
+	) union ( select 0 pid, 8 rid, 220045 itemid, 2 var_type, 86.25 val_num, 25 val_min, 230 val_max, 60 ref_min, 100 ref_max, 0 val_default		-- heart rate
+	) union ( select 0 pid, 9 rid, 220210 itemid, 2 var_type, 20 val_num, 0 val_min, 60 val_max, 12 ref_min, 18 ref_max, 15 val_default			-- respiratory rate
+	) union ( select 0 pid, 10 rid, 220179 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 1
+	) union ( select 0 pid, 10 rid, 220050 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 2
+	) union ( select 0 pid, 11 rid, 220180 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default		-- blood pressure, diastolic 1
+	) union ( select 0 pid, 11 rid, 220051 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default		-- blood pressure, diastolic 2
+	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default		-- O2 saturation 1
+	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default		-- O2 saturation 2
+	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49 val_num, 0 val_min, 100 val_max, 97 ref_min, 100 ref_max, 0 val_default		-- Fraction of inspired Oxygen (Fi02)
+	) union ( select 0 pid, 14 rid, 226104 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default			-- Conscious level (AVPU)
 	-- Laboratory cultures/ blood tests (mimic_hosp.labevents)
-	--
-
 	-- Blood metabolic panel --
-	) union (
-		-- Sodium
-		select 0 pid, 15 rid, 50983 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Potassium
-		select 0 pid, 16 rid, 50971 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Bicarbonate (CO2)
-		select 0 pid, 17 rid, 50882 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Anion Gap
-		select 0 pid, 18 rid, 50868 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Glucose 1
-		select 0 pid, 19 rid, 50931 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Glucose 2
-		select 0 pid, 19 rid, 50809 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Calcium
-		select 0 pid, 20 rid, 50893 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Blood Urea Nitrogen (BUN) 1
-		select 0 pid, 21 rid, 51006 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Blood Urea Nitrogen (BUN) 2
-		select 0 pid, 21 rid, 52647 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Serium Creatinine (SCr)
-		select 0 pid, 22 rid, 50912 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- BUN / SCr ratio
-		select 0 pid, 23 rid, 111111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Phosphate
-		select 0 pid, 24 rid, 50970 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	--
+	) union ( select 0 pid, 15 rid, 50983 itemid, 2 var_type, 138.591 val_num, 67 val_min, 185 val_max, 133 ref_min, 145 ref_max, 140 val_default	-- Sodium
+	) union ( select 0 pid, 16 rid, 50971 itemid, 2 var_type, 4.188 val_num, 0 val_min, 26 val_max, 3.3 ref_min, 5.4 ref_max, 4.25 val_default		-- Potassium
+	) union ( select 0 pid, 17 rid, 50882 itemid, 2 var_type, 25.510 val_num, 0 val_min, 132 val_max, 22 ref_min, 32 ref_max, 26 val_default		-- Bicarbonate (CO2)
+	) union ( select 0 pid, 18 rid, 50868 itemid, 2 var_type, 14.236 val_num, 0 val_min, 91 val_max, 8 ref_min, 20 ref_max, 14 val_default			-- Anion Gap
+	) union ( select 0 pid, 19 rid, 50931 itemid, 2 var_type, 127.467 val_num, 0 val_min, 300 val_max, 70 ref_min, 105 ref_max, 111 val_default		-- Glucose 1
+	) union ( select 0 pid, 19 rid, 50809 itemid, 2 var_type, 127.467 val_num, 0 val_min, 300 val_max, 70 ref_min, 105 ref_max, 111 val_default		-- Glucose 2
+	) union ( select 0 pid, 20 rid, 50893 itemid, 2 var_type, 8.791 val_num, 0 val_min, 132 val_max, 8.4 ref_min, 10.3 ref_max, 9 val_default		-- Calcium
+	) union ( select 0 pid, 21 rid, 51006 itemid, 2 var_type, 23.866 val_num, 0 val_min, 200 val_max, 6 ref_min, 20 ref_max, 18 val_default			-- Blood Urea Nitrogen (BUN) 1
+	) union ( select 0 pid, 21 rid, 52647 itemid, 2 var_type, 23.866 val_num, 0 val_min, 200 val_max, 6 ref_min, 20 ref_max, 18 val_default			-- Blood Urea Nitrogen (BUN) 2
+	) union ( select 0 pid, 22 rid, 50912 itemid, 2 var_type, 1.329 val_num, 0 val_min, 100 val_max, 0.45 ref_min, 1.15 ref_max, 0 val_default		-- Serium Creatinine (SCr)
+	) union ( select 0 pid, 23 rid, 11111 itemid, 2 var_type, 0 val_num, 0 val_min, 0 val_max, 0 ref_min, 0 ref_max, 0 val_default					-- BUN / SCr ratio
+	) union ( select 0 pid, 24 rid, 50970 itemid, 2 var_type, 3.555 val_num, 0 val_min, 50 val_max, 2.7 ref_min, 4.5 ref_max, 3.45 val_default		-- Phosphate
 	-- LiverFunction Test -- (mimic_hosp.labevents)
-	--
-	) union (
-		-- Total Protein
-		select 0 pid, 25 rid, 50976 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Albumin
-		select 0 pid, 26 rid, 50862 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Total Bilirubin
-		select 0 pid, 27 rid, 50885 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- AST (SGOT)
-		select 0 pid, 28 rid, 50878 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Alkaline Phosphatase
-		select 0 pid, 29 rid, 50863 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-
+	) union ( select 0 pid, 25 rid, 50976 itemid, 2 var_type, 6.838 val_num, 0 val_min, 19 val_max, 6.4 ref_min, 8.3 ref_max, 6.85 val_default		-- Total Protein
+	) union ( select 0 pid, 26 rid, 50862 itemid, 2 var_type, 3.782 val_num, 0 val_min, 36 val_max, 3.5 ref_min, 5.2 ref_max, 3.85 val_default		-- Albumin
+	) union ( select 0 pid, 27 rid, 50885 itemid, 2 var_type, 2.022 val_num, 0 val_min, 87 val_max, 0 ref_min, 1.5 ref_max, 1.25 val_default		-- Total Bilirubin
+	) union ( select 0 pid, 28 rid, 50878 itemid, 2 var_type, 34.952 val_num, 0 val_min, 150 val_max, 0 ref_min, 40 ref_max, 30.5 val_default		-- AST (SGOT)
+	) union ( select 0 pid, 29 rid, 50863 itemid, 2 var_type, 91.136 val_num, 0 val_min, 200 val_max, 40 ref_min, 115 ref_max, 86 val_default		-- Alkaline Phosphatase
 	-- Complete Blood Count (CBC) --- (mimic_hosp.labevents)
-	) union (
-		-- White blood Cells (WBC) 1
-		select 0 pid, 30 rid, 51300 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- White blood Cells (WBC) 2
-		select 0 pid, 30 rid, 51301 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Hemoglobin 1
-		select 0 pid, 31 rid, 51222 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Hemoglobin 2
-		select 0 pid, 31 rid, 50811 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Platelet Count
-		select 0 pid, 32 rid, 51265 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	
+	) union ( select 0 pid, 30 rid, 51300 itemid, 2 var_type, 8.784 val_num, 0 val_min, 200 val_max, 4 ref_min, 11 ref_max, 8.25 val_default		-- White blood Cells (WBC) 1
+	) union ( select 0 pid, 30 rid, 51301 itemid, 2 var_type, 8.784 val_num, 0 val_min, 200 val_max, 4 ref_min, 11 ref_max, 8.25 val_default		-- White blood Cells (WBC) 2
+	) union ( select 0 pid, 31 rid, 51222 itemid, 2 var_type, 11.068 val_num, 0 val_min, 98 val_max, 13.7 ref_min, 17.5 ref_max, 11.5 val_default		-- Hemoglobin 1
+	) union ( select 0 pid, 31 rid, 50811 itemid, 2 var_type, 11.068 val_num, 0 val_min, 98 val_max, 12 ref_min, 18 ref_max, 11.5 val_default		-- Hemoglobin 2
+	) union ( select 0 pid, 32 rid, 51265 itemid, 2 var_type, 232.658 val_num, 0 val_min, 3000 val_max, 150 ref_min, 440 ref_max, 226 val_default		-- Platelet Count
 	-- Other Labs -- (mimic_hosp.labevents)
-	) union (
-		-- Lactate 
-		select 0 pid, 33 rid, 50813 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Troponin I
-		select 0 pid, 34 rid, 51002 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Troponin T
-		select 0 pid, 34 rid, 51003 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- pH 
-		select 0 pid, 35 rid, 50820 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Ketones 
-		select 0 pid, 36 rid, 51984 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Chloride 
-		select 0 pid, 37 rid, 50902 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- International Normalized Ration (INR)  1
-		select 0 pid, 38 rid, 51237 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- International Normalized Ration (INR)  2
-		select 0 pid, 38 rid, 51675 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Lipase
-		select 0 pid, 39 rid, 50956 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Mean Corpuscular Volume (MCV)
-		select 0 pid, 40 rid, 51250 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Partial pressure carbon dioxide (PaCO2)
-		select 0 pid, 41 rid, 50818 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Partial pressure Oxygen (PaO2)
-		select 0 pid, 42 rid, 50821 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Partial Thromboplastin Time (PTT)
-		select 0 pid, 43 rid, 51275 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Red Cell Distribution Width (RDW)
-		select 0 pid, 44 rid, 51277 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default, 0 hospital_expire_flag
-
-	-- 
+	) union ( select 0 pid, 33 rid, 50813 itemid, 2 var_type, 2.269 val_num, 0 val_min, 132 val_max, 0.5 ref_min, 2 ref_max, 2.05 val_default		-- Lactate 
+	) union ( select 0 pid, 34 rid, 51002 itemid, 2 var_type, 0.462 val_num, 0 val_min, 20 val_max, 0 ref_min, 0.01 ref_max, 0.27 val_default		-- Troponin I (no results)
+	) union ( select 0 pid, 34 rid, 51003 itemid, 2 var_type, 0.462 val_num, 0 val_min, 20 val_max, 0 ref_min, 0.01 ref_max, 0.27 val_default		-- Troponin T
+	) union ( select 0 pid, 35 rid, 50820 itemid, 2 var_type, 7.372 val_num, 0 val_min, 9 val_max, 7.35 ref_min, 7.45 ref_max, 7.4 val_default		-- pH (blood)
+	) union ( select 0 pid, 36 rid, 51984 itemid, 2 var_type, 38.429 val_num, 0 val_min, 160 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Ketones 
+	) union ( select 0 pid, 37 rid, 50902 itemid, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default		-- Chloride 
+	) union ( select 0 pid, 38 rid, 51237 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default		-- International Normalized Ration (INR)  1
+	) union ( select 0 pid, 38 rid, 51675 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default		-- International Normalized Ration (INR)  2
+	) union ( select 0 pid, 39 rid, 50956 itemid, 2 var_type, 48.835 val_num, 0 val_min, 300 val_max, 0 ref_min, 60 ref_max, 38.5 val_default		-- Lipase
+	) union ( select 0 pid, 40 rid, 51250 itemid, 2 var_type, 90.945 val_num, 0 val_min, 161 val_max, 80 ref_min, 100 ref_max, 91 val_default		-- Mean Corpuscular Volume (MCV)
+	) union ( select 0 pid, 41 rid, 50818 itemid, 2 var_type, 43.335 val_num, 0 val_min, 246 val_max, 35 ref_min, 45 ref_max, 42 val_default		-- Partial pressure carbon dioxide (PaCO2)
+	) union ( select 0 pid, 42 rid, 50821 itemid, 2 var_type, 126.086 val_num, 0 val_min, 600 val_max, 85 ref_min, 105 ref_max, 100 val_default		-- Partial pressure Oxygen (PaO2)
+	) union ( select 0 pid, 43 rid, 51275 itemid, 2 var_type, 42.579 val_num, 0 val_min, 200 val_max, 25 ref_min, 36.5 ref_max, 36 val_default		-- Partial Thromboplastin Time (PTT)
+	) union ( select 0 pid, 44 rid, 51277 itemid, 2 var_type, 15.176 val_num, 0 val_min, 161 val_max, 10.5 ref_min, 15.5 ref_max, 14.8 val_default		-- Red Cell Distribution Width (RDW)
 	-- Interventions --
-	--
-		
-	) union (
-		-- Dialysis
-		select 0 pid, 45 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Bolus 0.9% Sodium Chloride / Normal Saline
-		select 0 pid, 46 rid, 225828 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Bolus - Lactated Ringers
-		select 0 pid, 46 rid, 225158 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Albumin 5%
-		select 0 pid, 47 rid, 220864 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Albumin 25%
-		select 0 pid, 47 rid, 220862 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using Ventilator
-		select 0 pid, 48 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using BiPAP (EPAP)
-		select 0 pid, 49 rid, 227579 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using BiPAP (IPAP)
-		select 0 pid, 49 rid, 227580 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using BiPAP (bipap bpm (S/T backup)
-		select 0 pid, 49 rid, 227581 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using BiPAP (O2 flow)
-		select 0 pid, 49 rid, 227582 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using CPAP (constant positive air pressure)
-		select 0 pid, 50 rid, 227583 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using HFNC (High Flow Nasal Cannula)
-		select 0 pid, 51 rid, 227287 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using Suction
-		select 0 pid, 52 rid, 226169 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-
+	) union ( select 0 pid, 45 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis
+	) union ( select 0 pid, 46 rid, 225828 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Bolus - 0.9% Sodium Chloride / Normal Saline
+	) union ( select 0 pid, 46 rid, 225158 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Bolus - Lactated Ringers
+	) union ( select 0 pid, 47 rid, 220864 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Albumin 5%
+	) union ( select 0 pid, 47 rid, 220862 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Albumin 25%
+	) union ( select 0 pid, 48 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using Ventilator
+	) union ( select 0 pid, 49 rid, 227579 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (EPAP)
+	) union ( select 0 pid, 49 rid, 227580 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (IPAP)
+	) union ( select 0 pid, 49 rid, 227581 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (bipap bpm (S/T backup)
+	) union ( select 0 pid, 49 rid, 227582 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (O2 flow)
+	) union ( select 0 pid, 50 rid, 227583 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using CPAP (constant positive air pressure)
+	) union ( select 0 pid, 51 rid, 227287 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using HFNC (High Flow Nasal Cannula)
+	) union ( select 0 pid, 52 rid, 226169 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using Suction
 	-- Transfusions
-	) union (
-		-- Red Blood Cells (RBC) transfusion
-		select 0 pid, 53 rid, 225168 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Fresh Frozen Plasma (FFP) transfusion
-		select 0 pid, 54 rid, 220970 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Platelet transfusion
-		select 0 pid, 55 rid, 225170 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Cryoprecipitate transfusion
-		select 0 pid, 56 rid, 225171 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	--
+	) union ( select 0 pid, 53 rid, 225168 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Red Blood Cells (RBC) transfusion
+	) union ( select 0 pid, 54 rid, 220970 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Fresh Frozen Plasma (FFP) transfusion
+	) union ( select 0 pid, 55 rid, 225170 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Platelet transfusion
+	) union ( select 0 pid, 56 rid, 225171 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Cryoprecipitate transfusion
 	-- Medications --
-	-- 
-	) union (
-		-- Nebulizer Treatments
-		select 0 pid, 57 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV/SC Hypoglycemics
-		select 0 pid, 58 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO Hypoglycemics
-		select 0 pid, 59 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Drip Hypoglycemics
-		select 0 pid, 60 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Lactulose
-		select 0 pid, 61 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV AV Nodal Blockers
-		select 0 pid, 62 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO AV Nodal Blockers
-		select 0 pid, 63 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Antiarrhythmic
-		select 0 pid, 64 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO Antiarrhythmic
-		select 0 pid, 65 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Anti Seizures
-		select 0 pid, 66 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Anticoagulants
-		select 0 pid, 67 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Steroids
-		select 0 pid, 68 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO Steroid
-		select 0 pid, 69 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Immunotherapy
-		select 0 pid, 70 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO Immunotherapy
-		select 0 pid, 71 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV AntiPsychotics
-		select 0 pid, 72 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO AntiPsychotics
-		select 0 pid, 73 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Sedative Drips
-		select 0 pid, 74 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Benzodiazepine
-		select 0 pid, 75 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO Benzodiazepine
-		select 0 pid, 76 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Vasopressors
-		select 0 pid, 77 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Inotropes
-		select 0 pid, 78 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- IV Diuretics
-		select 0 pid, 79 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- PO Diuretics
-		select 0 pid, 80 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Antibiotics
-		select 0 pid, 81 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-
-	-- 
+	) union ( select 0 pid, 57 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Nebulizer Treatments
+	) union ( select 0 pid, 58 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV/SC Hypoglycemics
+	) union ( select 0 pid, 59 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Hypoglycemics
+	) union ( select 0 pid, 60 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Drip Hypoglycemics
+	) union ( select 0 pid, 61 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Lactulose
+	) union ( select 0 pid, 62 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV AV Nodal Blockers
+	) union ( select 0 pid, 63 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO AV Nodal Blockers
+	) union ( select 0 pid, 64 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Antiarrhythmic
+	) union ( select 0 pid, 65 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Antiarrhythmic
+	) union ( select 0 pid, 66 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Anti Seizures
+	) union ( select 0 pid, 67 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Anticoagulants
+	) union ( select 0 pid, 68 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Steroids
+	) union ( select 0 pid, 69 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Steroid
+	) union ( select 0 pid, 70 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Immunotherapy
+	) union ( select 0 pid, 71 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Immunotherapy
+	) union ( select 0 pid, 72 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV AntiPsychotics
+	) union ( select 0 pid, 73 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO AntiPsychotics
+	) union ( select 0 pid, 74 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Sedative Drips
+	) union ( select 0 pid, 75 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Benzodiazepine
+	) union ( select 0 pid, 76 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Benzodiazepine
+	) union ( select 0 pid, 77 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Vasopressors
+	) union ( select 0 pid, 78 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Inotropes
+	) union ( select 0 pid, 79 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Diuretics
+	) union ( select 0 pid, 80 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Diuretics
+	) union ( select 0 pid, 81 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Antibiotics
 	-- Examinations --
-	--
-	) union (
-		-- Cardiac Paced
-		select 0 pid, 82 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Atrial Fibrillation
-		select 0 pid, 83 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Atrial Flutter
-		select 0 pid, 84 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Using? (not sure what this is)
-		select 0 pid, 85 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Superventricular SVT
-		select 0 pid, 86 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- VT
-		select 0 pid, 87 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- VF
-		select 0 pid, 88 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Asystole
-		select 0 pid, 89 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Heart Block
-		select 0 pid, 90 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Junctional Rhythm
-		select 0 pid, 91 rid, 11111 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default, 0 hospital_expire_flag
-
-	-- 
+	) union ( select 0 pid, 82 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Cardiac Paced
+	) union ( select 0 pid, 83 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Fibrillation
+	) union ( select 0 pid, 84 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Flutter
+	) union ( select 0 pid, 85 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Using? (not sure what this is)
+	) union ( select 0 pid, 86 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Superventricular SVT
+	) union ( select 0 pid, 87 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VT
+	) union ( select 0 pid, 88 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VF
+	) union ( select 0 pid, 89 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Asystole
+	) union ( select 0 pid, 90 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
+	) union ( select 0 pid, 91 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
 	-- Braden scores
-	--
-	) union (
-		-- Braden Sensory Perception
-		select 0 pid, 92 rid, 224054 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Braden Moisture
-		select 0 pid, 93 rid, 224055 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Braden Activity
-		select 0 pid, 94 rid, 224056 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Braden Mobility
-		select 0 pid, 95 rid, 224057 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Braden Nutrition
-		select 0 pid, 96 rid, 224058 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Braden Friction/Shear
-		select 0 pid, 97 rid, 224059 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 2 ref_min, 3 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Braden Cumulative Total
-		select 0 pid, 98 rid, 8 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 18 ref_min, 23 ref_max, 0 val_default, 0 hospital_expire_flag
-		
-	--
+	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Sensory Perception
+	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Moisture
+	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Activity
+	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Mobility
+	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Nutrition
+	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 2 ref_min, 3 ref_max, 0 val_default		-- Braden Friction/Shear
+	) union ( select 0 pid, 98 rid, 8 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 18 ref_min, 23 ref_max, 0 val_default		-- Braden Cumulative Total
 	--	Morse Fall risk scale
-	--
-	) union (
-		-- Morse, patient has history of falling?
-		select 0 pid, 99 rid, 227341 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 25 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, patient has secondary diagnosis?
-		select 0 pid, 100 rid, 227342 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, patient use ambulatory aid?
-		select 0 pid, 101 rid, 227343 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 30 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, patient receiving IV therapy or Heparin Lock?
-		select 0 pid, 102 rid, 227344 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, how is patient's gait?
-		select 0 pid, 103 rid, 227345 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, what is patient's mental status?
-		select 0 pid, 104 rid, 227346 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, is patient low risk?
-		select 0 pid, 105 rid, 227348 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, is patient high risk?
-		select 0 pid, 106 rid, 227349 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Morse, cumulative score
-		select 0 pid, 107 rid, 9 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 2 var_type, 0 val_num, 0 val_min, 125 val_max, 0 ref_min, 25 ref_max, 0 val_default, 0 hospital_expire_flag
-
-	--
+	) union ( select 0 pid, 99 rid, 227341 itemid, 2 var_type, 0 val_num, 0 val_min, 25 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has history of falling?
+	) union ( select 0 pid, 100 rid, 227342 itemid, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has secondary diagnosis?
+	) union ( select 0 pid, 101 rid, 227343 itemid, 2 var_type, 0 val_num, 0 val_min, 30 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient use ambulatory aid?
+	) union ( select 0 pid, 102 rid, 227344 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient receiving IV therapy or Heparin Lock?
+	) union ( select 0 pid, 103 rid, 227345 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, how is patient's gait?
+	) union ( select 0 pid, 104 rid, 227346 itemid, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, what is patient's mental status?
+	) union ( select 0 pid, 105 rid, 227348 itemid, 2 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient low risk?
+	) union ( select 0 pid, 106 rid, 227349 itemid, 2 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient high risk?
+	) union ( select 0 pid, 107 rid, 9 itemid, 2 var_type, 0 val_num, 0 val_min, 125 val_max, 0 ref_min, 25 ref_max, 0 val_default		-- Morse, cumulative score
 	-- Diagnostics / Urinary
-	--
-	) union (
-		-- EKG
-		select 0 pid, 108 rid, 225402 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- TTE
-		select 0 pid, 109 rid, 225432 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Chest X-ray
-		select 0 pid, 110 rid, 225459 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Chest X-ray (portable)
-		select 0 pid, 110 rid, 229581 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Abdomen X-ray
-		select 0 pid, 111 rid, 225457 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- CT Scan (head, neck, chest, and abdomen)
-		select 0 pid, 112 rid, 221214 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- CT Scan (head, neck, chest, and abdomen - portable
-		select 0 pid, 112 rid, 229582 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Ultrasound
-		select 0 pid, 113 rid, 221217 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Blood Culture Order
-		select 0 pid, 114 rid, 225401 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Urine, OR Urine
-		select 0 pid, 115 rid, 226627 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Urine, PACU Urine
-		select 0 pid, 115 rid, 226631 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Urine, U Irrigant/Urine Volume Out
-		select 0 pid, 115 rid, 227489 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Foley Catheter Placed
-		select 0 pid, 116 rid, 229351 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
-	) union (
-		-- Foley Catheter output
-		select 0 pid, 116 rid, 226559 itemid, '1000-01-01 00:00:00.000' checkin, '1000-01-01 00:00:00.000' charted, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, 0 hospital_expire_flag
+	) union ( select 0 pid, 108 rid, 225402 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- EKG
+	) union ( select 0 pid, 109 rid, 225432 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- TTE
+	) union ( select 0 pid, 110 rid, 225459 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Chest X-ray
+	) union ( select 0 pid, 110 rid, 229581 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Chest X-ray (portable)
+	) union ( select 0 pid, 111 rid, 225457 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Abdomen X-ray
+	) union ( select 0 pid, 112 rid, 221214 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- CT Scan (head, neck, chest, and abdomen)
+	) union ( select 0 pid, 112 rid, 229582 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- CT Scan (head, neck, chest, and abdomen - portable
+	) union ( select 0 pid, 113 rid, 221217 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Ultrasound
+	) union ( select 0 pid, 114 rid, 225401 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Blood Culture Order
+	) union ( select 0 pid, 115 rid, 226627 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, OR Urine
+	) union ( select 0 pid, 115 rid, 226631 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, PACU Urine
+	) union ( select 0 pid, 115 rid, 227489 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, U Irrigant/Urine Volume Out
+	) union ( select 0 pid, 116 rid, 229351 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Foley Catheter Placed
+	) union ( select 0 pid, 116 rid, 226559 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Foley Catheter output
 	)
 	
 ), patient_ids as (
@@ -584,18 +279,18 @@ with val_defaults as (
 			from patient_ids
 		)
 	) union (
-		-- patient admission type (degree of severity/urgency).  Mimic's concept of location is not the same as university of chicago, and therefore not useful.
+		-- patient admission reason.  Used in place of patient location.
 		select p.subject_id, a.hadm_id, 6 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", 
 		(case 
-			when a.admission_type = 'ELECTIVE' then 1
-			when a.admission_type = 'OBSERVATION ADMIT' then 2
-			when a.admission_type = 'DIRECT OBSERVATION' then 3
+			when a.admission_type = 'ELECTIVE'               then 1
+			when a.admission_type = 'OBSERVATION ADMIT'      then 2
+			when a.admission_type = 'DIRECT OBSERVATION'     then 3
 			when a.admission_type = 'AMBULATORY OBSERVATION' then 4
-			when a.admission_type = 'EU OBSERVATION' then 5
+			when a.admission_type = 'EU OBSERVATION'         then 5
 			when a.admission_type = 'SURGICAL SAME DAY ADMISSION' then 6
-			when a.admission_type = 'URGENT' then 7
-			when a.admission_type = 'DIRECT EMER.' then 8
-			when a.admission_type = 'EW EMER.' then 9
+			when a.admission_type = 'URGENT'                 then 7
+			when a.admission_type = 'DIRECT EMER.'           then 8
+			when a.admission_type = 'EW EMER.'               then 9
 			else 0 end
 		) as val_num, 0 as val_min, 9 as val_max, 1 as ref_min, 9 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_core.patients p 
@@ -914,7 +609,7 @@ with val_defaults as (
 	 * MERGE subquery results
 	 *********************************/
 	(
-		select pid as subject_id, vid as hadm_id, itemid, checkin as admittime, charted as charttime, var_type, val_num, val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag
+		select pid as subject_id, rid as hadm_id, itemid, cast( '1000-01-01 00:00:00.000' as timestamp ) as admittime, cast( '1000-01-01 00:00:00.000' as timestamp ) as charttime, var_type, val_num, val_min, val_max, ref_min, ref_max, val_default, 0 as hospital_expire_flag
 		from val_defaults
 	) union (
 		select *
