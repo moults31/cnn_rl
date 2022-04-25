@@ -10,10 +10,10 @@ def main():
     Main function.
     Runs all models with default settings.
     """
-    print("###############################")
-    print("Running MEWS/SOFA")
-    clinical_scores.main()
-    print("###############################\n")
+    # print("###############################")
+    # print("Running MEWS/SOFA")
+    # clinical_scores.main()
+    # print("###############################\n")
 
     print("###############################")
     print("Running CNN")
@@ -32,7 +32,7 @@ def main():
 
     print("###############################")
     print("\n Running InceptionV3")
-    inceptionv3.main(n_epoch=0)
+    inceptionv3.main()
     print("###############################\n")
 
 
