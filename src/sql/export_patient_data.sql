@@ -29,20 +29,20 @@ with val_defaults as (
 	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
 	) union ( select 0 pid, 4 rid, 4 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- prior admission to hospital within previous 90 days.
 	) union ( select 0 pid, 5 rid, 5 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 23 ref_max, 0 val_default		-- hour of day
-	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 9 val_max, 0 ref_min, 9 ref_max, 0 val_default		-- patient health severity (was patient location)
+	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 41 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- patient location -- health severity/priority
 	-- vital signs (mimic_icu.chartevents)	
 	) union ( select 0 pid, 7 rid, 223762 itemid, 2 var_type, 37.0 val_num, 27 val_min, 42 val_max, 36.1 ref_min, 37.2 ref_max, 37 val_default		-- temperature C
 	) union ( select 0 pid, 7 rid, 223761 itemid, 2 var_type, 98.6 val_num, 90 val_min, 106 val_max, 97 ref_min, 99 ref_max, 98.6 val_default		-- temperature F
 	) union ( select 0 pid, 8 rid, 220045 itemid, 2 var_type, 86.25 val_num, 25 val_min, 230 val_max, 60 ref_min, 100 ref_max, 0 val_default		-- heart rate
-	) union ( select 0 pid, 9 rid, 220210 itemid, 2 var_type, 20 val_num, 0 val_min, 60 val_max, 12 ref_min, 18 ref_max, 15 val_default			-- respiratory rate
+	) union ( select 0 pid, 9 rid, 220210 itemid, 2 var_type, 20 val_num, 0 val_min, 60 val_max, 12 ref_min, 18 ref_max, 15 val_default				-- respiratory rate
 	) union ( select 0 pid, 10 rid, 220179 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 1
 	) union ( select 0 pid, 10 rid, 220050 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 2
-	) union ( select 0 pid, 11 rid, 220180 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default		-- blood pressure, diastolic 1
-	) union ( select 0 pid, 11 rid, 220051 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default		-- blood pressure, diastolic 2
-	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default		-- O2 saturation 1
-	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default		-- O2 saturation 2
-	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49 val_num, 0 val_min, 100 val_max, 97 ref_min, 100 ref_max, 0 val_default		-- Fraction of inspired Oxygen (Fi02)
-	) union ( select 0 pid, 14 rid, 226104 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default			-- Conscious level (AVPU)
+	) union ( select 0 pid, 11 rid, 220180 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default			-- blood pressure, diastolic 1
+	) union ( select 0 pid, 11 rid, 220051 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default			-- blood pressure, diastolic 2
+	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default			-- O2 saturation 1
+	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default			-- O2 saturation 2
+	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49 val_num, 0 val_min, 100 val_max, 97 ref_min, 100 ref_max, 0 val_default			-- Fraction of inspired Oxygen (Fi02)
+	) union ( select 0 pid, 14 rid, 226104 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default				-- Conscious level (AVPU)
 	-- Laboratory cultures/ blood tests (mimic_hosp.labevents)
 	-- Blood metabolic panel --
 	) union ( select 0 pid, 15 rid, 50983 itemid, 2 var_type, 138.591 val_num, 67 val_min, 185 val_max, 133 ref_min, 145 ref_max, 140 val_default	-- Sodium
@@ -74,16 +74,16 @@ with val_defaults as (
 	) union ( select 0 pid, 34 rid, 51002 itemid, 2 var_type, 0.462 val_num, 0 val_min, 20 val_max, 0 ref_min, 0.01 ref_max, 0.27 val_default		-- Troponin I (no results)
 	) union ( select 0 pid, 34 rid, 51003 itemid, 2 var_type, 0.462 val_num, 0 val_min, 20 val_max, 0 ref_min, 0.01 ref_max, 0.27 val_default		-- Troponin T
 	) union ( select 0 pid, 35 rid, 50820 itemid, 2 var_type, 7.372 val_num, 0 val_min, 9 val_max, 7.35 ref_min, 7.45 ref_max, 7.4 val_default		-- pH (blood)
-	) union ( select 0 pid, 36 rid, 51984 itemid, 2 var_type, 38.429 val_num, 0 val_min, 160 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Ketones 
-	) union ( select 0 pid, 37 rid, 50902 itemid, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default		-- Chloride 
-	) union ( select 0 pid, 38 rid, 51237 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default		-- International Normalized Ration (INR)  1
-	) union ( select 0 pid, 38 rid, 51675 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default		-- International Normalized Ration (INR)  2
+	) union ( select 0 pid, 36 rid, 51984 itemid, 2 var_type, 38.429 val_num, 0 val_min, 160 val_max, 0 ref_min, 0 ref_max, 0 val_default			-- Ketones 
+	) union ( select 0 pid, 37 rid, 50902 itemid, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default			-- Chloride 
+	) union ( select 0 pid, 38 rid, 51237 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default	-- International Normalized Ration (INR)  1
+	) union ( select 0 pid, 38 rid, 51675 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default	-- International Normalized Ration (INR)  2
 	) union ( select 0 pid, 39 rid, 50956 itemid, 2 var_type, 48.835 val_num, 0 val_min, 300 val_max, 0 ref_min, 60 ref_max, 38.5 val_default		-- Lipase
 	) union ( select 0 pid, 40 rid, 51250 itemid, 2 var_type, 90.945 val_num, 0 val_min, 161 val_max, 80 ref_min, 100 ref_max, 91 val_default		-- Mean Corpuscular Volume (MCV)
 	) union ( select 0 pid, 41 rid, 50818 itemid, 2 var_type, 43.335 val_num, 0 val_min, 246 val_max, 35 ref_min, 45 ref_max, 42 val_default		-- Partial pressure carbon dioxide (PaCO2)
 	) union ( select 0 pid, 42 rid, 50821 itemid, 2 var_type, 126.086 val_num, 0 val_min, 600 val_max, 85 ref_min, 105 ref_max, 100 val_default		-- Partial pressure Oxygen (PaO2)
 	) union ( select 0 pid, 43 rid, 51275 itemid, 2 var_type, 42.579 val_num, 0 val_min, 200 val_max, 25 ref_min, 36.5 ref_max, 36 val_default		-- Partial Thromboplastin Time (PTT)
-	) union ( select 0 pid, 44 rid, 51277 itemid, 2 var_type, 15.176 val_num, 0 val_min, 161 val_max, 10.5 ref_min, 15.5 ref_max, 14.8 val_default		-- Red Cell Distribution Width (RDW)
+	) union ( select 0 pid, 44 rid, 51277 itemid, 2 var_type, 15.176 val_num, 0 val_min, 161 val_max, 10.5 ref_min, 15.5 ref_max, 14.8 val_default	-- Red Cell Distribution Width (RDW)
 	-- Interventions --
 	) union ( select 0 pid, 45 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis
 	) union ( select 0 pid, 46 rid, 225828 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Bolus - 0.9% Sodium Chloride / Normal Saline
@@ -104,49 +104,49 @@ with val_defaults as (
 	) union ( select 0 pid, 55 rid, 225170 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Platelet transfusion
 	) union ( select 0 pid, 56 rid, 225171 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Cryoprecipitate transfusion
 	-- Medications --
-	) union ( select 0 pid, 57 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Nebulizer Treatments
-	) union ( select 0 pid, 58 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV/SC Hypoglycemics
-	) union ( select 0 pid, 59 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Hypoglycemics
-	) union ( select 0 pid, 60 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Drip Hypoglycemics
-	) union ( select 0 pid, 61 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Lactulose
-	) union ( select 0 pid, 62 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV AV Nodal Blockers
-	) union ( select 0 pid, 63 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO AV Nodal Blockers
-	) union ( select 0 pid, 64 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Antiarrhythmic
-	) union ( select 0 pid, 65 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Antiarrhythmic
-	) union ( select 0 pid, 66 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Anti Seizures
-	) union ( select 0 pid, 67 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Anticoagulants
-	) union ( select 0 pid, 68 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Steroids
-	) union ( select 0 pid, 69 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Steroid
-	) union ( select 0 pid, 70 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Immunotherapy
-	) union ( select 0 pid, 71 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Immunotherapy
-	) union ( select 0 pid, 72 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV AntiPsychotics
-	) union ( select 0 pid, 73 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO AntiPsychotics
-	) union ( select 0 pid, 74 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Sedative Drips
-	) union ( select 0 pid, 75 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Benzodiazepine
-	) union ( select 0 pid, 76 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Benzodiazepine
-	) union ( select 0 pid, 77 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Vasopressors
-	) union ( select 0 pid, 78 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Inotropes
-	) union ( select 0 pid, 79 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Diuretics
-	) union ( select 0 pid, 80 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Diuretics
-	) union ( select 0 pid, 81 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Antibiotics
+	) union ( select 0 pid, 57 rid, 10001 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Nebulizer Treatments
+	) union ( select 0 pid, 58 rid, 10002 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV/SC Hypoglycemics
+	) union ( select 0 pid, 59 rid, 10003 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Hypoglycemics
+	) union ( select 0 pid, 60 rid, 10004 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Drip Hypoglycemics
+	) union ( select 0 pid, 61 rid, 10005 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Lactulose
+	) union ( select 0 pid, 62 rid, 10006 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV AV Nodal Blockers
+	) union ( select 0 pid, 63 rid, 10007 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO AV Nodal Blockers
+	) union ( select 0 pid, 64 rid, 10008 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Antiarrhythmic
+	) union ( select 0 pid, 65 rid, 10009 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Antiarrhythmic
+	) union ( select 0 pid, 66 rid, 10010 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Anti Seizures
+	) union ( select 0 pid, 67 rid, 10011 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Anticoagulants
+	) union ( select 0 pid, 68 rid, 10012 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Steroids
+	) union ( select 0 pid, 69 rid, 10013 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Steroid
+	) union ( select 0 pid, 70 rid, 10014 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Immunotherapy
+	) union ( select 0 pid, 71 rid, 10015 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Immunotherapy
+	) union ( select 0 pid, 72 rid, 10016 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV AntiPsychotics
+	) union ( select 0 pid, 73 rid, 10017 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO AntiPsychotics
+	) union ( select 0 pid, 74 rid, 10018 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Sedative Drips
+	) union ( select 0 pid, 75 rid, 10019 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Benzodiazepine
+	) union ( select 0 pid, 76 rid, 10020 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Benzodiazepine
+	) union ( select 0 pid, 77 rid, 10021 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Vasopressors
+	) union ( select 0 pid, 78 rid, 10022 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Inotropes
+	) union ( select 0 pid, 79 rid, 10023 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Diuretics
+	) union ( select 0 pid, 80 rid, 10024 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Diuretics
+	) union ( select 0 pid, 81 rid, 10025 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Antibiotics
 	-- Examinations --
-	) union ( select 0 pid, 82 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Cardiac Paced
-	) union ( select 0 pid, 83 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Fibrillation
-	) union ( select 0 pid, 84 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Flutter
-	) union ( select 0 pid, 85 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Using? (not sure what this is)
-	) union ( select 0 pid, 86 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Superventricular SVT
-	) union ( select 0 pid, 87 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VT
-	) union ( select 0 pid, 88 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VF
-	) union ( select 0 pid, 89 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Asystole
-	) union ( select 0 pid, 90 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
-	) union ( select 0 pid, 91 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
+	) union ( select 0 pid, 82 rid, 10026 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Cardiac Paced
+	) union ( select 0 pid, 83 rid, 10027 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Fibrillation
+	) union ( select 0 pid, 84 rid, 10028 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Flutter
+	) union ( select 0 pid, 85 rid, 10029 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Using? (not sure what this is)
+	) union ( select 0 pid, 86 rid, 10030 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Superventricular SVT
+	) union ( select 0 pid, 87 rid, 10031 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VT
+	) union ( select 0 pid, 88 rid, 10032 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VF
+	) union ( select 0 pid, 89 rid, 10033 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Asystole
+	) union ( select 0 pid, 90 rid, 10034 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
+	) union ( select 0 pid, 91 rid, 10035 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
 	-- Braden scores
-	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Sensory Perception
-	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Moisture
-	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Activity
-	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Mobility
-	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 3 ref_min, 4 ref_max, 0 val_default		-- Braden Nutrition
-	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 2 ref_min, 3 ref_max, 0 val_default		-- Braden Friction/Shear
+	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Sensory Perception
+	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Moisture
+	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Activity
+	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Mobility
+	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Nutrition
+	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 3 ref_min, 3 ref_max, 0 val_default		-- Braden Friction/Shear
 	) union ( select 0 pid, 98 rid, 8 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 18 ref_min, 23 ref_max, 0 val_default		-- Braden Cumulative Total
 	--	Morse Fall risk scale
 	) union ( select 0 pid, 99 rid, 227341 itemid, 2 var_type, 0 val_num, 0 val_min, 25 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has history of falling?
@@ -155,8 +155,8 @@ with val_defaults as (
 	) union ( select 0 pid, 102 rid, 227344 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient receiving IV therapy or Heparin Lock?
 	) union ( select 0 pid, 103 rid, 227345 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, how is patient's gait?
 	) union ( select 0 pid, 104 rid, 227346 itemid, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, what is patient's mental status?
-	) union ( select 0 pid, 105 rid, 227348 itemid, 2 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient low risk?
-	) union ( select 0 pid, 106 rid, 227349 itemid, 2 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient high risk?
+	) union ( select 0 pid, 105 rid, 227348 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient low risk?
+	) union ( select 0 pid, 106 rid, 227349 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient high risk?
 	) union ( select 0 pid, 107 rid, 9 itemid, 2 var_type, 0 val_num, 0 val_min, 125 val_max, 0 ref_min, 25 ref_max, 0 val_default		-- Morse, cumulative score
 	-- Diagnostics / Urinary
 	) union ( select 0 pid, 108 rid, 225402 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- EKG
@@ -173,6 +173,83 @@ with val_defaults as (
 	) union ( select 0 pid, 115 rid, 227489 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, U Irrigant/Urine Volume Out
 	) union ( select 0 pid, 116 rid, 229351 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Foley Catheter Placed
 	) union ( select 0 pid, 116 rid, 226559 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Foley Catheter output
+	)
+	
+), emar_actions as (
+
+	-- medication event descriptions
+
+	(         select 0 active, ''                                          med_action
+	) union ( select 1 active, 'Administered'                              med_action
+	) union ( select 1 active, 'Administered Bolus from IV Drip'           med_action
+	) union ( select 1 active, 'Administered in Other Location'            med_action
+	) union ( select 1 active, 'Applied'                                   med_action
+	) union ( select 1 active, 'Applied in Other Location'                 med_action
+	) union ( select 1 active, 'Assessed'                                  med_action
+	) union ( select 1 active, 'Assessed in Other Location'                med_action
+	) union ( select 1 active, 'Confirmed'                                 med_action
+	) union ( select 1 active, 'Confirmed in Other Location'               med_action
+	) union ( select 0 active, 'Delayed '                                  med_action	/* NOTE: trailing space is part of the label */
+	) union ( select 0 active, 'Delayed Administered'                      med_action
+	) union ( select 0 active, 'Delayed Applied'                           med_action
+	) union ( select 0 active, 'Delayed Assessed'                          med_action
+	) union ( select 0 active, 'Delayed Confirmed'                         med_action
+	) union ( select 0 active, 'Delayed Flushed'                           med_action
+	) union ( select 0 active, 'Delayed Not Applied'                       med_action
+	) union ( select 0 active, 'Delayed Not Assessed'                      med_action
+	) union ( select 0 active, 'Delayed Not Confirmed'                     med_action
+	) union ( select 0 active, 'Delayed Not Flushed'                       med_action
+	) union ( select 0 active, 'Delayed Not Removed'                       med_action
+	) union ( select 0 active, 'Delayed Not Started'                       med_action
+	) union ( select 1 active, 'Delayed Not Stopped'                       med_action
+	) union ( select 1 active, 'Delayed Rate Change'                       med_action
+	) union ( select 1 active, 'Delayed Removed'                           med_action
+	) union ( select 0 active, 'Delayed Restarted'                         med_action
+	) union ( select 0 active, 'Delayed Started'                           med_action
+	) union ( select 1 active, 'Delayed Stopped'                           med_action
+	) union ( select 1 active, 'Delayed Stopped As Directed'               med_action
+	) union ( select 0 active, 'Documented in O.R. Holding'                med_action
+	) union ( select 1 active, 'Flushed'                                   med_action
+	) union ( select 1 active, 'Flushed in Other Location'                 med_action
+	) union ( select 0 active, 'Hold Dose'                                 med_action
+	) union ( select 0 active, 'Infusion Reconciliation'                   med_action
+	) union ( select 0 active, 'Infusion Reconciliation in Other Location' med_action
+	) union ( select 0 active, 'Infusion Reconciliation Not Done'          med_action
+	) union ( select 1 active, 'in Other Location'                         med_action
+	) union ( select 0 active, 'Not Applied'                               med_action
+	) union ( select 0 active, 'Not Assessed'                              med_action
+	) union ( select 0 active, 'Not Confirmed'                             med_action
+	) union ( select 0 active, 'Not Flushed'                               med_action
+	) union ( select 0 active, 'Not Given'                                 med_action
+	) union ( select 0 active, 'Not Given per Sliding Scale'               med_action
+	) union ( select 0 active, 'Not Given per Sliding Scale in Other Location' med_action
+	) union ( select 0 active, 'Not Read'                                  med_action
+	) union ( select 1 active, 'Not Removed'                               med_action
+	) union ( select 0 active, 'Not Started'                               med_action
+	) union ( select 0 active, 'Not Started per Sliding Scale'             med_action
+	) union ( select 1 active, 'Not Stopped'                               med_action
+	) union ( select 1 active, 'Not Stopped per Sliding Scale'             med_action
+	) union ( select 1 active, 'Partial '                                  med_action
+	) union ( select 1 active, 'Partial Administered'                      med_action
+	) union ( select 1 active, 'Rate Change'                               med_action
+	) union ( select 1 active, 'Rate Change in Other Location'             med_action
+	) union ( select 1 active, 'Read'                                      med_action
+	) union ( select 1 active, 'Read in Other Location'                    med_action
+	) union ( select 0 active, 'Removed'                                   med_action
+	) union ( select 1 active, 'Removed Existing / Applied New'            med_action
+	) union ( select 1 active, 'Removed Existing / Applied New in Other Location' med_action
+	) union ( select 1 active, 'Removed in Other Location'                 med_action
+	) union ( select 0 active, 'Removed - Unscheduled'                     med_action
+	) union ( select 1 active, 'Restarted'                                 med_action
+	) union ( select 1 active, 'Restarted in Other Location'               med_action
+	) union ( select 1 active, 'Started'                                   med_action
+	) union ( select 1 active, 'Started in Other Location'                 med_action
+	) union ( select 0 active, 'Stopped'                                   med_action
+	) union ( select 0 active, 'Stopped As Directed'                       med_action
+	) union ( select 0 active, 'Stopped in Other Location'                 med_action
+	) union ( select 0 active, 'Stopped - Unscheduled'                     med_action
+	) union ( select 0 active, 'Stopped - Unscheduled in Other Location'   med_action
+	) union ( select 1 active, 'TPN Rate Not Changed'                      med_action
 	)
 	
 ), patient_ids as (
@@ -193,6 +270,11 @@ with val_defaults as (
 	select distinct a.hadm_id
 	from mimic_core.admissions a
 	where extract( epoch from age( a.dischtime, a.admittime ) ) >= 172800
+	-- restrict patient cohort size by consulting patient_ids generated earlier:
+    and a.subject_id in (
+        select *
+        from patient_ids
+	)
 	
 ), patient_chars as (
 
@@ -231,7 +313,7 @@ with val_defaults as (
 		
 	) union (
 	
-		-- prior history of cardiace arrest (experienced in ICU)
+		-- prior history of cardiac arrest (experienced in ICU)
 		select a.subject_id, a.hadm_id, 3 as itemid, a.admittime, p.starttime, 0 as var_type, (case when p.value is null or p.value <> 1 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag 
 		from mimic_core.admissions a join mimic_icu.procedureevents p 
 		on a.subject_id = p.subject_id
@@ -354,6 +436,8 @@ with val_defaults as (
 		and extract( epoch from age( ht.intime, a.admittime )) between 0 and 172800
 
 --		order by t.subject_id asc, t.intime asc ;
+		
+		-- patient severity/priority (how serious is the situation based on where they checked into the hospital)
 --	) union (
 --		-- patient admission reason.  Used in place of patient location.
 --		select p.subject_id, a.hadm_id, 6 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", 
@@ -543,28 +627,622 @@ with val_defaults as (
 		) and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
 	)
 	
---), medications as (
+), medications as (
 
 	/****************************************************
 	 * Medications - find medications given to the patient
 	 *****************************************************/
-/*
-	select d.subject_id, d.hadm_id, e.itemid, d.admittime, e.charttime, e.value, e.valuenum, e.valueuom, d.hospital_expire_flag
-	from mimic_core.admissions d join mimic_hosp.emar e
-	on d.subject_id = l.subject_id 
-	where d.hadm_id is not null
-	and e.valuenum is not null
-	and e.itemid in (
-		-- medications
-
-	)
-	and l.subject_id in (
-		-- ids of patients admitted to hospital and stayed for at least 48 hours.
+	with med_codes as (
+		--
+		-- Lookup table mapping drug product_code to desired itemid
+		--
+		(         select 0 itemid, 'Unknown'         med_code
+		-- Nebulizer treatments 
+		) union ( select 10001 itemid, 'ALBU3H'      med_code	-- albuterol
+		) union ( select 10001 itemid, 'IPAL3H'      med_code
+		) union ( select 10001 itemid, 'IPRA2H'      med_code
+		) union ( select 10001 itemid, 'BUDE0.5'     med_code
+		) union ( select 10001 itemid, 'BUDE0.25'    med_code
+		) union ( select 10001 itemid, 'LEVA0.63L'   med_code
+		) union ( select 10001 itemid, 'SODI3N'      med_code
+		
+		-- IV/SC Hypoglycemics
+		) union ( select 10002 itemid, 'GLUC1000I'   med_code	-- glucagon
+		) union ( select 10002 itemid, 'GLUC1I'      med_code
+		) union ( select 10002 itemid, 'DEX50SY'     med_code	-- dextrose
+		) union ( select 10002 itemid, 'D5WLV'       med_code
+	
+		-- PO Hypoglycemics
+		) union ( select 10003 itemid, 'GLIP10'      med_code
+		) union ( select 10003 itemid, 'GLIP5'       med_code
+		) union ( select 10003 itemid, 'GLIP10'      med_code
+		) union ( select 10003 itemid, 'GLUC10XL'    med_code
+		) union ( select 10003 itemid, 'GLUC2.5XL'   med_code
+		) union ( select 10003 itemid, 'GLUC5XL'     med_code
+		) union ( select 10003 itemid, 'GLYB1.25'    med_code
+		) union ( select 10003 itemid, 'GLIM2'       med_code
+		) union ( select 10003 itemid, 'GLYB25'      med_code
+		) union ( select 10003 itemid, 'GLYB5'       med_code
+		) union ( select 10003 itemid, 'GLIM1'       med_code
+		) union ( select 10003 itemid, 'GLYN3'       med_code
+		) union ( select 10003 itemid, 'GLIM4'       med_code
+		) union ( select 10003 itemid, 'NATE60'      med_code
+		) union ( select 10003 itemid, 'REPA0.5'     med_code
+		) union ( select 10003 itemid, 'REPA2'       med_code
+		) union ( select 10003 itemid, 'PIOG15'      med_code
+		) union ( select 10003 itemid, 'PIOG45'      med_code
+		) union ( select 10003 itemid, 'ACAR50'      med_code
+		) union ( select 10003 itemid, 'METF500'     med_code
+		) union ( select 10003 itemid, 'METF500XR'   med_code
+		) union ( select 10003 itemid, 'METF750XR'   med_code
+		) union ( select 10003 itemid, 'METF850'     med_code
+		) union ( select 10003 itemid, 'BROM25'      med_code
+		) union ( select 10003 itemid, 'SITA50'      med_code
+		
+		-- Drip Hypoglycemics
+		) union ( select 10004 itemid, '-Drip Hypoglycemic-' med_code
+		
+		-- Lactulose
+		) union ( select 10005 itemid, 'LACT30L'      med_code
+		) union ( select 10005 itemid, 'LACT250R'     med_code
+		) union ( select 10005 itemid, 'LACT30L'      med_code
+		
+		-- IV AV Nodal Blockers
+		) union ( select 10006 itemid, 'LABE600/200'  med_code
+		) union ( select 10006 itemid, 'LABE100I'     med_code
+		) union ( select 10006 itemid, 'DILT500I'     med_code
+		) union ( select 10006 itemid, 'DILT25I'      med_code
+		) union ( select 10006 itemid, 'DILT12L'      med_code
+		) union ( select 10006 itemid, 'DILT125D'     med_code
+		) union ( select 10006 itemid, 'DILT5L'       med_code
+		) union ( select 10006 itemid, 'LOMO5L'       med_code
+		) union ( select 10006 itemid, 'ADEN6I'       med_code
+	
+		-- PO AV Nodal Blockers
+		) union ( select 10007 itemid, 'TIAZ120'    med_code
+		) union ( select 10007 itemid, 'TIAZ180'    med_code
+		) union ( select 10007 itemid, 'TIAZ240'    med_code
+		) union ( select 10007 itemid, 'TIAZ300'    med_code
+		) union ( select 10007 itemid, 'DILT30'     med_code
+		) union ( select 10007 itemid, 'DILT60'     med_code
+		) union ( select 10007 itemid, 'DILT90'     med_code
+		) union ( select 10007 itemid, 'LABE200'    med_code
+		) union ( select 10007 itemid, 'LABE100'    med_code
+		) union ( select 10007 itemid, 'VERA120'    med_code
+		) union ( select 10007 itemid, 'VERA120SR'  med_code
+		) union ( select 10007 itemid, 'VERA180SR'  med_code
+		) union ( select 10007 itemid, 'VERA240SR'  med_code
+		) union ( select 10007 itemid, 'VERA40'     med_code
+		) union ( select 10007 itemid, 'VERA80'     med_code
+		) union ( select 10007 itemid, 'LOMO'       med_code
+		) union ( select 10007 itemid, 'ATEN25'     med_code
+		) union ( select 10007 itemid, 'ATEN50'     med_code
+		) union ( select 10007 itemid, 'METO1L'     med_code
+		) union ( select 10007 itemid, 'METO12.5HT' med_code
+		) union ( select 10007 itemid, 'METO25'     med_code
+		) union ( select 10007 itemid, 'METO37.5'   med_code
+		) union ( select 10007 itemid, 'METO50'     med_code
+		) union ( select 10007 itemid, 'NEBI5'      med_code
+		) union ( select 10007 itemid, 'PROP10'     med_code
+		) union ( select 10007 itemid, 'PROP40'     med_code
+		) union ( select 10007 itemid, 'PROP120'    med_code
+		) union ( select 10007 itemid, 'PROP60'     med_code
+		) union ( select 10007 itemid, 'PROPLA80'   med_code
+		) union ( select 10007 itemid, 'PROP4L'     med_code
+		
+		) union ( select 10007 itemid, 'NPROP4L'    med_code
+		) union ( select 10007 itemid, 'DIGO125'    med_code
+		) union ( select 10007 itemid, 'DIGO25'     med_code
+		) union ( select 10007 itemid, 'DIGO0.05L'  med_code
+	
+		-- IV AntiArrythmic
+		) union ( select 10008 itemid, 'AMIBOLUS'       med_code
+		) union ( select 10008 itemid, 'AMIO600/500D5W' med_code
+		) union ( select 10008 itemid, 'AMIO150I'       med_code
+		) union ( select 10008 itemid, 'AMIO450/250N'   med_code
+		) union ( select 10008 itemid, 'AMIO150DK'		med_code
+		) union ( select 10008 itemid, 'DXIG40I'        med_code
+		) union ( select 10008 itemid, 'MAG4PM'         med_code
+		) union ( select 10008 itemid, 'MAG2PM'         med_code
+		) union ( select 10008 itemid, 'MAG2PMPM'       med_code
+		) union ( select 10008 itemid, 'MAG2PMLF'       med_code
+	
+		-- PO AntiArrythmic
+		) union ( select 10009 itemid, 'AMID200'     med_code	-- amiodarone
+		) union ( select 10009 itemid, 'AMID200M'    med_code
+		) union ( select 10009 itemid, 'QUIG324'     med_code
+		) union ( select 10009 itemid, 'QUIN200'     med_code
+		) union ( select 10009 itemid, 'QUIN300'     med_code
+		) union ( select 10009 itemid, 'DISO100'     med_code
+		) union ( select 10009 itemid, 'DISO150CR'   med_code
+		) union ( select 10009 itemid, 'DISO100CR'   med_code
+		) union ( select 10009 itemid, 'DISO150'     med_code
+		) union ( select 10009 itemid, 'PHEN50'      med_code
+		) union ( select 10009 itemid, 'DILA30'      med_code
+		) union ( select 10009 itemid, 'MEXI150'     med_code
+		) union ( select 10009 itemid, 'MEXI200'     med_code
+		) union ( select 10009 itemid, 'MEXI25'      med_code
+		) union ( select 10009 itemid, 'FLEC50'      med_code
+		) union ( select 10009 itemid, 'PROP150'     med_code
+		) union ( select 10009 itemid, 'PROP225'     med_code
+		) union ( select 10009 itemid, 'CARV125'     med_code
+		) union ( select 10009 itemid, 'CARV25'      med_code
+		) union ( select 10009 itemid, 'CARV3125'    med_code
+		) union ( select 10009 itemid, 'CARV625'     med_code
+		) union ( select 10009 itemid, 'BISO5'       med_code
+		) union ( select 10009 itemid, 'TOPR100'     med_code
+		) union ( select 10009 itemid, 'TOPR25'      med_code
+		) union ( select 10009 itemid, 'TOPR50'      med_code
+		) union ( select 10009 itemid, 'SOTA80'      med_code
+		) union ( select 10009 itemid, 'DOFE500'     med_code
+		) union ( select 10009 itemid, 'DOFE125'     med_code
+		) union ( select 10009 itemid, 'DOFE250'     med_code
+		) union ( select 10009 itemid, 'DRON400'     med_code
+	
+		-- Anti Seizures
+		) union ( select 10010 itemid, 'LORA60PB'     med_code
+		) union ( select 10010 itemid, 'ACE250'       med_code
+		) union ( select 10010 itemid, 'ACE500'       med_code
+		) union ( select 10010 itemid, 'ACET250D'     med_code
+		) union ( select 10010 itemid, 'ACET500D'     med_code
+		) union ( select 10010 itemid, 'CLON0.125ODT' med_code
+		) union ( select 10010 itemid, 'CLON1'        med_code
+		) union ( select 10010 itemid, 'CLON5'        med_code
+		) union ( select 10010 itemid, 'CLOR375'      med_code
+		) union ( select 10010 itemid, 'DIAZ10'       med_code
+		) union ( select 10010 itemid, 'DIAZ10I'      med_code
+		) union ( select 10010 itemid, 'DIAZ2'        med_code
+		) union ( select 10010 itemid, 'DIAZ5'        med_code
+		) union ( select 10010 itemid, 'DIAZE5L'      med_code
+		) union ( select 10010 itemid, 'LAMO100'      med_code
+		) union ( select 10010 itemid, 'LAMO100BN'    med_code
+		) union ( select 10010 itemid, 'LAMO100S'     med_code
+		) union ( select 10010 itemid, 'LAMO100XR'    med_code
+		) union ( select 10010 itemid, 'LAMO25'       med_code
+		) union ( select 10010 itemid, 'LAMO25BRAND'  med_code
+		) union ( select 10010 itemid, 'LAMO25XR'     med_code
+		) union ( select 10010 itemid, 'LAMO300S'     med_code
+		) union ( select 10010 itemid, 'LAMO5'        med_code
+		) union ( select 10010 itemid, 'TOPI100'      med_code
+		) union ( select 10010 itemid, 'TOPI25'       med_code
+		) union ( select 10010 itemid, 'TOPI6L'       med_code
+		) union ( select 10010 itemid, 'VAL250L'      med_code
+		) union ( select 10010 itemid, 'VALP250'      med_code
+	
+		-- IV Anticoagulants (e.g. heparin)
+		) union ( select 10011 itemid, 'ACD3/1000I'      med_code
+		) union ( select 10011 itemid, 'FENT2.550'       med_code
+		) union ( select 10011 itemid, 'FENT2I'          med_code
+		) union ( select 10011 itemid, 'BICINEO'         med_code
+		) union ( select 10011 itemid, 'TOBR/SODCIT5SYR' med_code
+		) union ( select 10011 itemid, 'MAGCITL'         med_code
+		) union ( select 10011 itemid, 'HEP10I'          med_code
+		) union ( select 10011 itemid, 'HEPA5000LF'      med_code
+		) union ( select 10011 itemid, 'HEPPREMIX'       med_code
+		) union ( select 10011 itemid, 'HEPA25/250NS'    med_code
+		) union ( select 10011 itemid, 'STARTPND10'      med_code
+		) union ( select 10011 itemid, 'VANHEPLOCKDIAL'  med_code
+		) union ( select 10011 itemid, 'HEPA10MUI'       med_code
+		) union ( select 10011 itemid, 'STARTD5HEP'      med_code
+		) union ( select 10011 itemid, 'HEPPREMIXP'      med_code
+		) union ( select 10011 itemid, 'DAPT10HEP%S'     med_code
+		) union ( select 10011 itemid, 'HEPPREMIXNS'     med_code
+		) union ( select 10011 itemid, 'HEPA30I'         med_code
+		) union ( select 10011 itemid, 'HEPIMP3125'      med_code
+		) union ( select 10011 itemid, 'HEPA5I'          med_code
+	
+		-- IV Steroids (anti-inflammatory)
+		) union ( select 10012 itemid, 'DEXA12/50D5W'    med_code
+	
+		) union ( select 10012 itemid, 'BUDE0.5'        med_code
+		) union ( select 10012 itemid, 'BUDE0.25'       med_code
+		) union ( select 10012 itemid, 'DEXA12/50D5W'   med_code
+		) union ( select 10012 itemid, 'PRED5L'         med_code
+		) union ( select 10012 itemid, 'NEODEXA0.2L'    med_code
+		) union ( select 10012 itemid, 'METH1000MBP'    med_code
+	
+		-- PO Steroids (anti-inflammatory)
+		) union ( select 10013 itemid, 'PRED20'     med_code
+		) union ( select 10013 itemid, 'DEXA4'      med_code
+		) union ( select 10013 itemid, 'PRED10'     med_code
+		) union ( select 10013 itemid, 'PRED50'     med_code
+		) union ( select 10013 itemid, 'DEXA2'      med_code
+		) union ( select 10013 itemid, 'PRED25'     med_code
+		) union ( select 10013 itemid, 'PRED5SM'    med_code
+		) union ( select 10013 itemid, 'MPRED2'     med_code
+		) union ( select 10013 itemid, 'METH8'      med_code
+		) union ( select 10013 itemid, 'DEXA5'      med_code
+		) union ( select 10013 itemid, 'DEXA15'     med_code
+		) union ( select 10013 itemid, 'BUDE3'      med_code
+		) union ( select 10013 itemid, 'HC5'        med_code
+		) union ( select 10013 itemid, 'PRED1'      med_code
+		) union ( select 10013 itemid, 'FLUD100'    med_code
+		) union ( select 10013 itemid, 'HC20'       med_code
+	
+		-- IV Immunotherapy (cancer treatments)
+		) union ( select 10014 itemid, 'OXAL1.4'        med_code
+		) union ( select 10014 itemid, 'OXAL14'         med_code
+		) union ( select 10014 itemid, 'OXAL140'        med_code
+		) union ( select 10014 itemid, 'NIVO480/960INV' med_code
+		) union ( select 10014 itemid, 'MYCO1PB'        med_code
+		) union ( select 10014 itemid, 'MYCO1500PB'     med_code
+		) union ( select 10014 itemid, 'MYCO250IV'      med_code
+		) union ( select 10014 itemid, 'MYCO500/85'     med_code
+		) union ( select 10014 itemid, 'MYCO750'        med_code
+	
+		-- PO Immunotherapy (cancer treatments)
+		) union ( select 10015 itemid, 'GILT40'      med_code
+		) union ( select 10015 itemid, 'MIDOS25'     med_code
+	
+	--	-- IV AntiPsychotics
+		) union ( select 10016 itemid, 'HALO2OS'     med_code
+		) union ( select 10016 itemid, 'THOR25I'     med_code
+		) union ( select 10016 itemid, 'FLUP5L'      med_code
+		) union ( select 10016 itemid, 'FLUP25L'     med_code
+		) union ( select 10016 itemid, 'FLUP125I'    med_code
+		) union ( select 10016 itemid, 'FLUP2.5I'    med_code
+	
+		-- PO AntiPsychotics
+		) union ( select 10017 itemid, 'LOXA5'      med_code
+		) union ( select 10017 itemid, 'ILOP2'      med_code
+		) union ( select 10017 itemid, 'TRIF1'      med_code
+		) union ( select 10017 itemid, 'THIO10'     med_code
+		) union ( select 10017 itemid, 'THIO100'    med_code
+		) union ( select 10017 itemid, 'TRIF2'      med_code
+		) union ( select 10017 itemid, 'TRIF5'      med_code
+		) union ( select 10017 itemid, 'FLUP1'      med_code
+		) union ( select 10017 itemid, 'THOR10'     med_code
+		) union ( select 10017 itemid, 'THIO25'     med_code
+		) union ( select 10017 itemid, 'FLUP10'     med_code
+		) union ( select 10017 itemid, 'FLUP25'     med_code
+		) union ( select 10017 itemid, 'THOR100'    med_code
+		) union ( select 10017 itemid, 'PERP2'      med_code
+		) union ( select 10017 itemid, 'PERP8'      med_code
+		) union ( select 10017 itemid, 'PROC5'      med_code
+		) union ( select 10017 itemid, 'THOR25'     med_code
+		) union ( select 10017 itemid, 'PROC10'     med_code
+		) union ( select 10017 itemid, 'THIX1'      med_code
+		) union ( select 10017 itemid, 'THIX5'      med_code
+		) union ( select 10017 itemid, 'HALO2L'     med_code
+		) union ( select 10017 itemid, 'HALO1'      med_code
+		) union ( select 10017 itemid, 'LOXA25'     med_code
+		) union ( select 10017 itemid, 'HALO10'     med_code
+		) union ( select 10017 itemid, 'HALO2'      med_code
+		) union ( select 10017 itemid, 'HALO05'     med_code
+		) union ( select 10017 itemid, 'HALO5'      med_code
+	
+		-- Sedative Drips
+		) union ( select 10018 itemid, 'PROP100IG'    med_code
+		) union ( select 10018 itemid, 'PROP200IG'    med_code
+		) union ( select 10018 itemid, 'PROP500IG'    med_code
+		) union ( select 10018 itemid, 'DEXM400INV'   med_code
+		) union ( select 10018 itemid, 'APRA5OS'      med_code
+	
+		-- IV Benzodiazepine
+		) union ( select 10019 itemid, 'LORA2I'      med_code
+		) union ( select 10019 itemid, 'LORA60PB'    med_code
+		) union ( select 10019 itemid, 'MIDA2I'      med_code
+		) union ( select 10019 itemid, 'MIDA5I'      med_code
+		) union ( select 10019 itemid, 'MIDA100PC'   med_code
+		) union ( select 10019 itemid, 'MIDA500'     med_code
+		) union ( select 10019 itemid, 'MIDA250'     med_code
+		) union ( select 10019 itemid, 'MIDA100'     med_code
+	
+		-- PO Benzodiazepine
+		) union ( select 10020 itemid, 'LORA5'         med_code
+		) union ( select 10020 itemid, 'LORA1'         med_code
+		) union ( select 10020 itemid, 'TEMA15'        med_code
+		) union ( select 10020 itemid, 'TRIA25'        med_code
+		) union ( select 10020 itemid, 'ALPR25'        med_code
+		) union ( select 10020 itemid, 'ALPR1'         med_code
+		) union ( select 10020 itemid, 'CHLO25'        med_code
+		) union ( select 10020 itemid, 'CHLOR5'        med_code
+		) union ( select 10020 itemid, 'CLOR375'       med_code
+		) union ( select 10020 itemid, 'DIAZ10'        med_code
+		) union ( select 10020 itemid, 'DIAZ2'         med_code
+		) union ( select 10020 itemid, 'DIAZ5'         med_code
+		) union ( select 10020 itemid, 'MIDA1L'        med_code
+		) union ( select 10020 itemid, 'OXAZ10'        med_code
+		) union ( select 10020 itemid, 'OXAZ15'        med_code
+	
+		-- Vasopressors (blood vessel constricting)
+		) union ( select 10021 itemid, 'PHEN10I'       med_code
+		) union ( select 10021 itemid, 'PHEN50I'       med_code
+		) union ( select 10021 itemid, 'PHEN50/250PM'  med_code
+		) union ( select 10021 itemid, 'PHEN60/250NS'  med_code
+		) union ( select 10021 itemid, 'PHEN60/250PM'  med_code
+		) union ( select 10021 itemid, 'PHEN60250D'    med_code
+		) union ( select 10021 itemid, 'PHEN60DK'      med_code
+		) union ( select 10021 itemid, 'CYCL2O'        med_code
+		) union ( select 10021 itemid, 'NEONEOIH'      med_code
+		) union ( select 10021 itemid, 'PHEN10ES'      med_code
+		) union ( select 10021 itemid, 'PHEN2.5O'      med_code
+		) union ( select 10021 itemid, 'PHEN25ES'      med_code
+		) union ( select 10021 itemid, 'PHEN5N'        med_code
+		) union ( select 10021 itemid, 'VASO40DK'      med_code
+		) union ( select 10021 itemid, 'VASO20I'       med_code
+		) union ( select 10021 itemid, 'VASO40/100'    med_code
+		) union ( select 10021 itemid, 'BUPIWE5I'      med_code
+		) union ( select 10021 itemid, 'EPI1I'         med_code
+		) union ( select 10021 itemid, 'EPI2DK'        med_code
+		) union ( select 10021 itemid, 'EPI400SYR'     med_code
+		) union ( select 10021 itemid, 'EPIPEN0.3I'    med_code
+		) union ( select 10021 itemid, 'EPIS10I'       med_code
+		) union ( select 10021 itemid, 'LIDEPF1.530I'  med_code
+		) union ( select 10021 itemid, 'LIDO/EPI30'    med_code
+		) union ( select 10021 itemid, 'LIEP550I'      med_code
+		) union ( select 10021 itemid, 'LIEPI20I'      med_code
+		) union ( select 10021 itemid, 'NEONEOIH'      med_code
+		) union ( select 10021 itemid, 'NORE8/250'     med_code
+		) union ( select 10021 itemid, 'NORE8/250N'    med_code
+		) union ( select 10021 itemid, 'NORE8/250NS'   med_code
+		) union ( select 10021 itemid, 'PHEN2.5O'      med_code
+		) union ( select 10021 itemid, 'RACE0.5H'      med_code	
+		) union ( select 10021 itemid, 'RACE0.5HN'     med_code	
+	
+		-- Inotropes (heart reviving)
+		) union ( select 10022 itemid, 'MILR20PM'    med_code
+		) union ( select 10022 itemid, 'DIGO.5I'     med_code
+		) union ( select 10022 itemid, 'DIGO0.05L'   med_code
+		) union ( select 10022 itemid, 'DIGO125'     med_code
+		) union ( select 10022 itemid, 'DIGO25'      med_code
+		) union ( select 10022 itemid, 'DIGO50L'     med_code
+		) union ( select 10022 itemid, 'DOPA400D'    med_code
+		) union ( select 10022 itemid, 'DXIG40I'     med_code
+	
+		-- IV Diuretics (increase water/fluid)
+		) union ( select 10023 itemid, 'BUME50D5W'         med_code
+		) union ( select 10023 itemid, 'POTA20/250D5'      med_code
+		) union ( select 10023 itemid, 'KCL40/100D'        med_code
+		) union ( select 10023 itemid, 'KCL40/500D'        med_code
+		) union ( select 10023 itemid, 'FURO40ILF'         med_code
+		) union ( select 10023 itemid, 'FURO40I'           med_code
+		) union ( select 10023 itemid, 'FURO20I'           med_code
+		) union ( select 10023 itemid, 'FURO10L'           med_code
+		) union ( select 10023 itemid, 'FURO250/50'        med_code
+		) union ( select 10023 itemid, 'FURO100PB'         med_code
+		) union ( select 10023 itemid, 'FURO40/40'         med_code
+		) union ( select 10023 itemid, 'KCL40/500N'        med_code
+		) union ( select 10023 itemid, 'POTA20/250NS'      med_code
+		) union ( select 10023 itemid, 'KCL40/500D'        med_code
+		) union ( select 10023 itemid, 'KCL40/500N'        med_code
+		) union ( select 10023 itemid, 'KCL20/1000D51/2NS' med_code
+		) union ( select 10023 itemid, 'KCL40/500D'        med_code
+		) union ( select 10023 itemid, 'POTA20/250D5'      med_code
+		) union ( select 10023 itemid, 'KCL20PM'           med_code
+		) union ( select 10023 itemid, 'KCL40/1000D5NS'    med_code
+		) union ( select 10023 itemid, 'KCL40/1000NS'      med_code
+		) union ( select 10023 itemid, 'KCL10NS100'        med_code
+		) union ( select 10023 itemid, 'KCL20/1000D5NS'    med_code
+		) union ( select 10023 itemid, 'KCL40/1000D51/2NS' med_code
+		) union ( select 10023 itemid, 'KCL10PM'           med_code
+		) union ( select 10023 itemid, 'KCL40/100D'        med_code
+		) union ( select 10023 itemid, 'KCL20/1000D5LR'    med_code
+		) union ( select 10023 itemid, 'KCL20/1000NS'      med_code
+		) union ( select 10023 itemid, 'KCL2050NS'         med_code
+		) union ( select 10023 itemid, 'BUME25I'           med_code
+		) union ( select 10023 itemid, 'CHL500I'           med_code
+		) union ( select 10023 itemid, 'ACET250D'          med_code
+		) union ( select 10023 itemid, 'MANN20PM'          med_code
+		) union ( select 10023 itemid, 'ACET500D'          med_code
+		) union ( select 10023 itemid, 'HYDR750L'          med_code
+		) union ( select 10023 itemid, 'BUME10/40'         med_code
+		) union ( select 10023 itemid, 'BUME1I'            med_code
+		) union ( select 10023 itemid, 'SPIR4L'            med_code
+	
+		-- PO Diuretics
+		) union ( select 10024 itemid, 'FURO20'     med_code
+		) union ( select 10024 itemid, 'FURO40'     med_code
+		) union ( select 10024 itemid, 'FURO80'     med_code
+		) union ( select 10024 itemid, 'HYDU500'    med_code
+		) union ( select 10024 itemid, 'TRIA50'     med_code
+		) union ( select 10024 itemid, 'HYDR200L'   med_code
+		) union ( select 10024 itemid, 'HYDR250L'   med_code
+		) union ( select 10024 itemid, 'SPIR25'     med_code
+		) union ( select 10024 itemid, 'HCTZ12.5'   med_code
+		) union ( select 10024 itemid, 'TORS5'      med_code
+		) union ( select 10024 itemid, 'TORS100'    med_code
+		) union ( select 10024 itemid, 'CHTH25'     med_code
+		) union ( select 10024 itemid, 'ACE250'     med_code
+		) union ( select 10024 itemid, 'BUME05'     med_code
+		) union ( select 10024 itemid, 'EPLE25'     med_code
+		) union ( select 10024 itemid, 'ETHA25'     med_code
+		) union ( select 10024 itemid, 'EPLE50'     med_code
+		) union ( select 10024 itemid, 'BUME2'      med_code
+		) union ( select 10024 itemid, 'METL25'     med_code
+		) union ( select 10024 itemid, 'HCTZ50'     med_code
+		) union ( select 10024 itemid, 'CHLO250'    med_code
+		) union ( select 10024 itemid, 'LOZ25'      med_code
+		) union ( select 10024 itemid, 'SPIR12.5HT' med_code
+		) union ( select 10024 itemid, 'ACE500'     med_code
+		) union ( select 10024 itemid, 'DYAZ1'      med_code
+		) union ( select 10024 itemid, 'TORS20'     med_code
+		) union ( select 10024 itemid, 'METZ50'     med_code
+		) union ( select 10024 itemid, 'AMIL5'      med_code
+		) union ( select 10024 itemid, 'HCTZ25'     med_code
+		) union ( select 10024 itemid, 'METL5'      med_code
+		) union ( select 10024 itemid, 'SPIR100'     med_code
+	
+		-- Antibiotics
+		) union ( select 10025 itemid, 'AMOX250'         med_code
+		) union ( select 10025 itemid, 'AMPI250'         med_code
+		) union ( select 10025 itemid, 'AMPI500'         med_code
+		) union ( select 10025 itemid, 'AMPI500L'        med_code
+		) union ( select 10025 itemid, 'AUGM875L'        med_code
+		) union ( select 10025 itemid, 'AUGM875'         med_code
+		) union ( select 10025 itemid, 'AUGM250'         med_code
+		) union ( select 10025 itemid, 'AUGM500'         med_code
+		) union ( select 10025 itemid, 'AMP1I'           med_code
+		) union ( select 10025 itemid, 'AMP2I'           med_code
+		) union ( select 10025 itemid, 'AMPDESEN2'       med_code
+		) union ( select 10025 itemid, 'AMPDESEN3'       med_code
+		) union ( select 10025 itemid, 'AMP1/100N'       med_code
+		) union ( select 10025 itemid, 'AMP1/100MBP'     med_code
+		) union ( select 10025 itemid, 'AMP2/100N'       med_code
+		) union ( select 10025 itemid, 'AMPI2/100MBP'    med_code
+		) union ( select 10025 itemid, 'AMPI2/100VMA'    med_code
+		) union ( select 10025 itemid, 'AMP500I'         med_code
+		) union ( select 10025 itemid, 'UNAS1.5I'        med_code
+		) union ( select 10025 itemid, 'UNAS1.5/100N'    med_code
+		) union ( select 10025 itemid, 'UNAS1.5/100MBP'  med_code
+		) union ( select 10025 itemid, 'UNAS3I'          med_code
+		) union ( select 10025 itemid, 'UNAS3/100N'      med_code
+		) union ( select 10025 itemid, 'UNAS3/100MBP'    med_code
+		) union ( select 10025 itemid, 'DICL250'         med_code
+		) union ( select 10025 itemid, 'DICL500'         med_code
+		) union ( select 10025 itemid, 'NAFC2I'          med_code
+		) union ( select 10025 itemid, 'NAFC1I'          med_code
+		) union ( select 10025 itemid, 'NAFC1/100MBP'    med_code
+		) union ( select 10025 itemid, 'NAFC2/100MBP'    med_code
+		) union ( select 10025 itemid, 'NAFC2F'          med_code
+		) union ( select 10025 itemid, 'OXAC1I'          med_code
+		) union ( select 10025 itemid, 'PCNGB240I'       med_code
+		) union ( select 10025 itemid, 'PENI12I'         med_code
+		) union ( select 10025 itemid, 'PENGK5I'         med_code
+		) union ( select 10025 itemid, 'PEN3FROZ'        med_code
+		) union ( select 10025 itemid, 'PENG5BAG'        med_code
+		) union ( select 10025 itemid, 'PENI125L'        med_code
+		) union ( select 10025 itemid, 'PENV250'         med_code
+		) union ( select 10025 itemid, 'PENV500'         med_code
+		) union ( select 10025 itemid, 'ZOSY2.25I'       med_code
+		) union ( select 10025 itemid, 'ZOSY4.5MBP'      med_code
+		) union ( select 10025 itemid, 'ZOSY4.5NS'       med_code
+		) union ( select 10025 itemid, 'ZOSY4FPB'        med_code
+		) union ( select 10025 itemid, 'ZOSY4.5FD'       med_code
+		) union ( select 10025 itemid, 'ZOSY4.5NS'       med_code
+		) union ( select 10025 itemid, 'ZOSY2.25IFD'     med_code
+		) union ( select 10025 itemid, 'AZIT500D5W'      med_code
+		) union ( select 10025 itemid, 'AZIT500NS'       med_code
+		) union ( select 10025 itemid, 'AZIT500I'        med_code
+		) union ( select 10025 itemid, 'AZIT500NSE'      med_code
+		) union ( select 10025 itemid, 'AZIT250IND'      med_code
+		) union ( select 10025 itemid, 'AZIT600'         med_code
+		) union ( select 10025 itemid, 'AZIT1O'          med_code
+		) union ( select 10025 itemid, 'ZITHR250'        med_code
+		) union ( select 10025 itemid, 'CEFA2/20SYR'     med_code
+		) union ( select 10025 itemid, 'CEFA1I'          med_code
+		) union ( select 10025 itemid, 'CEFA2/100D'      med_code
+		) union ( select 10025 itemid, 'CEF2GM'          med_code
+		) union ( select 10025 itemid, 'CEFX1F'          med_code
+		) union ( select 10025 itemid, 'CEFA1F'          med_code
+		) union ( select 10025 itemid, 'CEFA2D100'       med_code
+		) union ( select 10025 itemid, 'CEFA2D'          med_code
+		) union ( select 10025 itemid, 'CEFT1/50D'       med_code
+		) union ( select 10025 itemid, 'CEFT2/50D'       med_code
+		) union ( select 10025 itemid, 'CEFT3/100D'      med_code
+		) union ( select 10025 itemid, 'CEFE1/100D'      med_code
+		) union ( select 10025 itemid, 'CEFDESEN3'       med_code
+		) union ( select 10025 itemid, 'CEFE1/100D'      med_code
+		) union ( select 10025 itemid, 'CEFE1/100MBP'    med_code
+		) union ( select 10025 itemid, 'CEFE1/100N'      med_code
+		) union ( select 10025 itemid, 'CEFE1/50D'       med_code
+		) union ( select 10025 itemid, 'CEFE1I'          med_code
+		) union ( select 10025 itemid, 'CEFE2/100MBP'    med_code
+		) union ( select 10025 itemid, 'CEFE2F'          med_code
+		) union ( select 10025 itemid, 'CEFE2I'          med_code
+		) union ( select 10025 itemid, 'CEFR1I'          med_code
+		) union ( select 10025 itemid, 'CEFR250I'        med_code
+		) union ( select 10025 itemid, 'CEFR2I'          med_code
+		) union ( select 10025 itemid, 'CEFTR1/100MBP'   med_code
+		) union ( select 10025 itemid, 'CEFTR1/50D'      med_code
+		) union ( select 10025 itemid, 'CEFTR2/100MBP'   med_code
+		) union ( select 10025 itemid, 'CEFTR2/100N'     med_code
+		) union ( select 10025 itemid, 'CEFTR2/50D	'    med_code
+		) union ( select 10025 itemid, 'CILO25ES'        med_code
+		) union ( select 10025 itemid, 'CIPR200PM'       med_code
+		) union ( select 10025 itemid, 'CIPR250'         med_code
+		) union ( select 10025 itemid, 'CIPR400PM'       med_code
+		) union ( select 10025 itemid, 'CIPR500'         med_code
+		) union ( select 10025 itemid, 'CIPR50L'         med_code
+		) union ( select 10025 itemid, 'CIPRODEX'        med_code
+		) union ( select 10025 itemid, 'CLIN600PM'       med_code
+		) union ( select 10025 itemid, 'CLIN900PM'       med_code
+		) union ( select 10025 itemid, 'CLIN150'         med_code
+		) union ( select 10025 itemid, 'CLIN150IND'      med_code
+		) union ( select 10025 itemid, 'CLIN300L'        med_code
+		) union ( select 10025 itemid, 'CLIN450L'        med_code
+		) union ( select 10025 itemid, 'CLIN600L'        med_code
+		) union ( select 10025 itemid, 'CLIN150L'        med_code
+		) union ( select 10025 itemid, 'CLIN600P'        med_code
+		) union ( select 10025 itemid, 'CLIN900P'        med_code
+		) union ( select 10025 itemid, 'CLIN300PM'       med_code
+		) union ( select 10025 itemid, 'CLIN1S'          med_code
+		) union ( select 10025 itemid, 'DALB1500/250D5'  med_code
+		) union ( select 10025 itemid, 'DALB1500/500D5'  med_code
+		) union ( select 10025 itemid, 'LEVO750'         med_code
+		) union ( select 10025 itemid, 'LEV250'          med_code
+		) union ( select 10025 itemid, 'LEV500'          med_code
+		) union ( select 10025 itemid, 'LEVO250PM'       med_code
+		) union ( select 10025 itemid, 'LEVO500PM'       med_code
+		) union ( select 10025 itemid, 'LEVO750PM'       med_code
+		) union ( select 10025 itemid, 'VANC1F'          med_code
+		) union ( select 10025 itemid, 'VAN1250D'        med_code
+		) union ( select 10025 itemid, 'VANC1500D'       med_code
+		) union ( select 10025 itemid, 'VANC500F'        med_code
+		) union ( select 10025 itemid, 'VAN500D'         med_code
+		) union ( select 10025 itemid, 'VANC750F'        med_code
+		) union ( select 10025 itemid, 'VAN750D'         med_code
+		) union ( select 10025 itemid, 'VORI200/100D'    med_code
+		) union ( select 10025 itemid, 'VORI200'         med_code
+		) union ( select 10025 itemid, 'VORI50'          med_code
+		) union ( select 10025 itemid, 'VORI200/100N'    med_code
+		) union ( select 10025 itemid, 'VORI1OPH'        med_code
+		) union ( select 10025 itemid, 'VANC1750NS'      med_code
+		) union ( select 10025 itemid, 'VANC2000NS'      med_code
+		) union ( select 10025 itemid, 'VANC1000NS'      med_code
+		) union ( select 10025 itemid, 'VANHEPLOCKDIAL'  med_code
+		) union ( select 10025 itemid, 'VANCO25O'        med_code
+		) union ( select 10025 itemid, 'VANCO14O'        med_code
+		) union ( select 10025 itemid, 'VANC1FN'         med_code
+		) union ( select 10025 itemid, 'VANC1250NS'      med_code
+		) union ( select 10025 itemid, 'VANC750N'        med_code
+		) union ( select 10025 itemid, 'VANCO25OT'       med_code
+		) union ( select 10025 itemid, 'VANC500PR'       med_code
+		) union ( select 10025 itemid, 'VANC1500NS'      med_code
+		)
+	
+	), emar_detail_items as (
+	
+		-- join emar_detail with med_codes to map the medicine to our desired itemid
 		select *
-		from patient_ids
+		from med_codes d join mimic_hosp.emar_detail ed
+		on d.med_code = ed.product_code
+		where d.med_code = ed.product_code
+	
+	), emar_events as (
+	
+		-- join emar to emar_detail to map medicines to their administration time
+		select e.subject_id, e.hadm_id, ed.itemid, e.charttime, e.event_txt
+		from emar_detail_items ed  join mimic_hosp.emar e
+		on ed.emar_id = e.emar_id 
+		where ed.product_code in ( 
+			-- drugs to find by product_code
+			select mc.med_code
+			from med_codes mc
+		)
+		and e.hadm_id in (
+			-- elligible patient visits
+			select *
+			from visit_ids
+		)
+		
+	), emar_results as (
+	
+		-- join emar_events to emar_actions to map the medicine administration to the lookup table deciding if it's active
+		select ev.subject_id, ev.hadm_id, ev.itemid, ev.charttime, ea.active
+		from emar_events ev join emar_actions ea 
+		on ev.event_txt = ea.med_action
+		where ev.event_txt = ea.med_action 
+	
 	)
-	and extract( epoch from age( l.charttime, d.admittime )) between 0 and 172800
-*/
+	-- merge emar_results with mimic_core.admissions to form final result
+	select er.subject_id, er.hadm_id, er.itemid, a.admittime, er.charttime, 0 var_type, er.active as val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, a.hospital_expire_flag
+	from emar_results er join mimic_core.admissions a 
+	on er.hadm_id = a.hadm_id 
+	where extract( epoch from age( er.charttime, a.admittime )) < 172800
+	--order by er.subject_id asc, er.charttime asc, er.itemid asc ;
+	
+
 ), input_events as (
 
 	/*****************************************************
@@ -685,9 +1363,9 @@ with val_defaults as (
 	) union (
 		select *
 		from labs
---	) union (
---		select *
---		from medications
+	) union (
+		select *
+		from medications
 	) union (
 		select *
 		from input_events
@@ -717,5 +1395,4 @@ select r.subject_id as patient_id,
 	r.hospital_expire_flag as died
 from results r
 order by subject_id asc, charttime asc, hadm_id asc;
-
 
