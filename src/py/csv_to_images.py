@@ -3,7 +3,7 @@ from typing import Tuple
 from datetime import datetime
 import os
 import sys
-import patient
+import patient_visit
 import common
 import numpy as np
 import cv2
@@ -17,50 +17,73 @@ def parse_csv_to_images(csv_file: str):
     Top-level function that loads the provided 
     csv and saves images to disk as png.
     """
-    patients = dict()
+    patient_visits = dict()
     unknown_items = list()
+
+    item2feature, stats = generate_stats()
 
     print(f"Parsing {csv_file}")
     parse_start_time = time.time()
     with open(csv_file, 'r') as f:
         i = 0
+        i_batch = 0
+        visit_id_prev = 0
         for row in reader(f):
             if i == 0:
                 # Skip header row, we'll parse the columns ourselves
                 i = i + 1
                 continue
 
+            if int(row[common.Input_event_col.PATIENT_ID]) == common.MAPPING_PATIENT_ID:
+                # Skip rows with our special patient id.
+                continue
+
             # Apply names to each column
-            subject_id, itemid, admittime, dischtime, charttime, \
-                value, valuenum, valueuom, hospital_expire_flag = cast_csv_row(row)
-            if not itemid in common.item2feature:
+            patient_id, visit_id, itemid, hour, var_type, val_num, \
+                val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag = cast_csv_row(row)
+
+            # If we don't have a row mapping for this itemid, note that down
+            if not itemid in item2feature:
                 if not itemid in unknown_items:
                     unknown_items.append(itemid)
                 continue
 
             # Get the object for this patient, creating one if we haven't seen them before
-            if not subject_id in patients:
-                patients[subject_id] = patient.Patient(subject_id, admittime, dischtime, hospital_expire_flag)
-            subject = patients[subject_id]
+            if not visit_id in patient_visits:
+                patient_visits[visit_id] = patient_visit.Patient_visit(patient_id, visit_id, hospital_expire_flag)
+            subject = patient_visits[visit_id]
 
             # Compute the hour that this chart event happened at, relative to admission
-            hour = compute_hour_diff(charttime, admittime)
             if hour >= 48:
                 continue
 
             # Lookup Feature ID
-            feature_id = common.item2feature[itemid]
+            feature_id = item2feature[itemid]
 
             # Normalize valuenum
-            valuenum_norm = common.normalize(valuenum, feature_id, common.NORM_METHOD, itemid)
+            valuenum_norm = common.normalize(stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid)
 
             # Write valuenum to the remainder of the appropriate row
+            # print(f"visit {visit_id} [{feature_id}, {hour}] ")
             subject.img[feature_id, hour:] = valuenum_norm
+
+            if (i_batch >= common.CSV_PARSER_BATCH_SIZE) and (visit_id_prev != visit_id):
+                print(f"\nDone {i} rows")
+                print(f"Generating {len(patient_visits)} images")
+                gen_start_time = time.time()
+                generate_images(patient_visits)
+                patient_visits.clear()
+                i_batch = 0
+                print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
+
+            visit_id_prev = visit_id
 
             # Print progress indicator
             if (i % 500000) == 0:
                 print('.', end='', flush=True)
+
             i = i + 1
+            i_batch = i_batch + 1
 
     print("Parsing took {:.2f} sec".format(time.time() - parse_start_time))
 
@@ -69,27 +92,68 @@ def parse_csv_to_images(csv_file: str):
         for item in unknown_items:
             print(item)
 
-    print(f"Generating images")
+    print(f"Generating {len(patient_visits)} images")
     gen_start_time = time.time()
-    generate_images(patients)
+    generate_images(patient_visits)
     print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
 
-def cast_csv_row(row: list) -> Tuple[int, int, datetime, datetime, datetime, str, float, str, int]:
+def generate_stats():
+    """
+    Function to build up stats based on embedded mapping info
+    """
+    item2feature = dict()
+    stats = np.zeros((common.N_ROWS, common.Stats_col.N_COLS), dtype=np.float64)
+
+    print(f"Parsing {csv_file}")
+    parse_start_time = time.time()
+    i = 0
+    with open(csv_file, 'r') as f:
+        for row in reader(f):
+            if i == 0:
+                # Skip header row, we'll parse the columns ourselves
+                i = i + 1
+                continue
+
+            if int(row[common.Input_event_col.PATIENT_ID]) == common.MAPPING_PATIENT_ID:
+                # We only care about rows with our special patient id.
+                # In this special case, treat the visit_id column as row_id.
+                row_id = int(row[common.Input_event_col.VISIT_ID])
+                item2feature[int(row[common.Input_event_col.EVENT_ID])] = row_id
+
+                stats[row_id][common.Stats_col.VAR_TYPE] = float(row[common.Input_event_col.VAR_TYPE])
+                stats[row_id][common.Stats_col.VAL_NUM] = float(row[common.Input_event_col.VAL_NUM])
+                stats[row_id][common.Stats_col.VAL_MIN] = float(row[common.Input_event_col.VAL_MIN])
+                stats[row_id][common.Stats_col.VAL_MAX] = float(row[common.Input_event_col.VAL_MAX])
+                stats[row_id][common.Stats_col.VAL_DEFAULT] = float(row[common.Input_event_col.VAL_DEFAULT])
+
+                i = i + 1
+            else:
+                # We've finished reading the special mapping rows, so we're done here.
+                break
+
+    print(f"Generated stats for {i} itemids")
+
+    return item2feature, stats
+
+def cast_csv_row(row: list):
     """
     Casts each element of the provided row to the correct datatype
     """
-    subject_id  = int(row[0])
-    itemid      = int(row[1])
-    admittime = datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f')
-    dischtime = datetime.strptime(row[3], '%Y-%m-%d %H:%M:%S.%f')
-    charttime = datetime.strptime(row[4], '%Y-%m-%d %H:%M:%S.%f')
-    value       = row[5]
-    valuenum    = float(row[6])
-    valueuom    = row[7]
-    hospital_expire_flag = int(row[8])
+    patient_id  = int(row[common.Input_event_col.PATIENT_ID])
+    visit_id    = int(row[common.Input_event_col.VISIT_ID])
+    itemid      = int(row[common.Input_event_col.EVENT_ID])
+    hour        = int(row[common.Input_event_col.HOUR])
+    var_type    = int(row[common.Input_event_col.VAR_TYPE])
+    val_num     = float(row[common.Input_event_col.VAL_NUM])
+    val_min     = float(row[common.Input_event_col.VAL_MIN])
+    val_max     = float(row[common.Input_event_col.VAL_MAX])
+    ref_min     = float(row[common.Input_event_col.REF_MIN])
+    ref_max     = float(row[common.Input_event_col.REF_MAX])
+    val_default = float(row[common.Input_event_col.VAL_DEFAULT])
+    hospital_expire_flag = int(row[common.Input_event_col.DIED])
 
-    return subject_id, itemid, admittime, dischtime, charttime, \
-        value, valuenum, valueuom, hospital_expire_flag
+    return patient_id, visit_id, itemid, hour, var_type, \
+        val_num, val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag
 
 def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
     """
@@ -108,18 +172,18 @@ def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
 
     return diff
 
-def generate_images(patients: dict, test_split: float = 0.2, val_split: float = 0.3):
+def generate_images(patient_visits: dict, test_split: float = 0.2, val_split: float = 0.3):
     """
     Generates an image for the given patient using OpenCV.
-    Images are saved to IMAGES_DIR and named by subject_id.
+    Images are saved to IMAGES_DIR and named by patient_id.
     """
 
-    test_start_idx = len(patients) * (1 - val_split) * (1 - test_split)
-    val_start_idx = len(patients) * (1 - test_split)
+    test_start_idx = len(patient_visits) * (1 - val_split) * (1 - test_split)
+    val_start_idx = len(patient_visits) * (1 - test_split)
 
     i = 0
-    for subjectid in patients:
-        subject = patients[subjectid]
+    for key in patient_visits:
+        visit = patient_visits[key]
 
         # Determine which split this patient will fall into and set the path accordingly.
         # Todo: Add a feature for shuffling splits
@@ -135,19 +199,19 @@ def generate_images(patients: dict, test_split: float = 0.2, val_split: float = 
         with open(os.path.join(img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='') as f:
             label_writer = writer(f, delimiter=',')
 
-            img_name = os.path.join(img_path, f"{subjectid}{OUT_IMG_SUFFIX}.png")
+            img_name = os.path.join(img_path, f"{visit.patient_id}_{visit.visit_id}{OUT_IMG_SUFFIX}.png")
             # Write label for this patient into labels.csv
-            line = [c.strip() for c in f"{os.path.basename(img_name)}, {subject.hospital_expire_flag}".strip(', ').split(',')]
+            line = [c.strip() for c in f"{os.path.basename(img_name)}, {visit.hospital_expire_flag}".strip(', ').split(',')]
             label_writer.writerow(line)
 
             # Create 3-channel image
             img = np.zeros((common.N_ROWS, common.N_COLS, 3), dtype=int)
 
             # Populate it with patient timeline, duplicated in all 3 channels
-            subject.img = subject.img
-            img[:, :, 0] = subject.img
-            img[:, :, 1] = subject.img
-            img[:, :, 2] = subject.img
+            visit.img = visit.img
+            img[:, :, 0] = visit.img
+            img[:, :, 1] = visit.img
+            img[:, :, 2] = visit.img
 
             cv2.imwrite(img_name, img)
 
@@ -171,4 +235,5 @@ if __name__ == "__main__":
     except:
         pass
 
-    parse_csv_to_images(os.path.join(os.getenv('DATA_DIR'), csv_file))
+    path = os.path.join(os.getenv('DATA_DIR'), csv_file)
+    parse_csv_to_images(path)
