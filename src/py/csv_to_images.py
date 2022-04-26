@@ -59,7 +59,7 @@ def parse_csv_to_images(csv_file: str):
 
             # Get the object for this patient, creating one if we haven't seen them before
             if not visit_id in patient_visits:
-                patient_visits[visit_id] = patient_visit.Patient_visit(patient_id, visit_id, hospital_expire_flag, stats)
+                patient_visits[visit_id] = patient_visit.Patient_visit(patient_id, visit_id, hospital_expire_flag, stats, item2feature)
             subject = patient_visits[visit_id]
 
             # Lookup Feature ID
@@ -67,7 +67,7 @@ def parse_csv_to_images(csv_file: str):
 
             # If this item ID falls in the range of our special ones, handle that
             if itemid in [item.value for item in common.Special_itemids]:
-                handle_special_itemid(itemid, val_num, subject)
+                handle_special_itemid(itemid, val_num, subject, stats, item2feature)
             else:
                 # Otherwise, normalize valuenum
                 valuenum_norm = common.normalize(stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid)
@@ -137,6 +137,8 @@ def generate_stats():
                 stats[row_id][common.Stats_col.VAL_NUM] = float(row[common.Input_event_col.VAL_NUM])
                 stats[row_id][common.Stats_col.VAL_MIN] = float(row[common.Input_event_col.VAL_MIN])
                 stats[row_id][common.Stats_col.VAL_MAX] = float(row[common.Input_event_col.VAL_MAX])
+                stats[row_id][common.Stats_col.REF_MIN] = float(row[common.Input_event_col.REF_MIN])
+                stats[row_id][common.Stats_col.REF_MAX] = float(row[common.Input_event_col.REF_MAX])
                 stats[row_id][common.Stats_col.VAL_DEFAULT] = float(row[common.Input_event_col.VAL_DEFAULT])
 
                 i = i + 1
@@ -183,12 +185,27 @@ def tally_clinical_scores(patient_visits, stats, item2feature):
     Handles itemids that have special meanings. Often involves directly updating
     the image for the given patient. 
     """
-    # Compute bounds for normalization
-    braden_lower_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MIN] for itemid in common.braden_itemids])
-    braden_upper_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MAX] for itemid in common.braden_itemids])
-    morse_lower_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MIN] for itemid in common.morse_itemids])
-    morse_upper_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MAX] for itemid in common.morse_itemids])
+    braden_cumulative_default_normalized = common.normalize(
+        stats,
+        stats[common.BRADEN_ROWID, common.Stats_col.VAL_DEFAULT],
+        stats[common.BRADEN_ROWID, common.Stats_col.REF_MIN],
+        stats[common.BRADEN_ROWID, common.Stats_col.REF_MAX],
+        common.BRADEN_ROWID,
+        stats[common.BRADEN_ROWID, common.Stats_col.VAR_TYPE],
+        common.NORM_METHOD
+    )
 
+    morse_cumulative_default_normalized = common.normalize(
+        stats,
+        stats[common.MORSE_ROWID, common.Stats_col.VAL_DEFAULT],
+        stats[common.MORSE_ROWID, common.Stats_col.REF_MIN],
+        stats[common.MORSE_ROWID, common.Stats_col.REF_MAX],
+        common.MORSE_ROWID,
+        stats[common.MORSE_ROWID, common.Stats_col.VAR_TYPE],
+        common.NORM_METHOD
+    )
+
+    # Compute bounds for normalization
     for key in patient_visits:
         visit = patient_visits[key]
 
@@ -196,29 +213,57 @@ def tally_clinical_scores(patient_visits, stats, item2feature):
         braden = visit.braden.sum(axis=0)
         morse = visit.morse.sum(axis=0)
 
-        # Normalize
-        braden = np.interp(braden, [braden_lower_bound, braden_upper_bound], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
-        morse = np.interp(morse, [morse_lower_bound, morse_upper_bound], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
-
-        # Write morse/braden timelines to image
+        braden_normalized = np.zeros_like(braden)
+        morse_normalized = np.zeros_like(morse)
         for hour in range(common.N_HOURS):
-            if braden[hour] != 0:
-                visit.img[common.BRADEN_ROWID, hour:] = braden[hour]
-            if morse[hour] != 0:
-                visit.img[common.MORSE_ROWID, hour:] = morse[hour]
+            # Normalize
+            braden_normalized[hour] = common.normalize(
+                stats,
+                braden[hour],
+                stats[common.BRADEN_ROWID, common.Stats_col.REF_MIN],
+                stats[common.BRADEN_ROWID, common.Stats_col.REF_MAX],
+                common.BRADEN_ROWID,
+                stats[common.BRADEN_ROWID, common.Stats_col.VAR_TYPE],
+                common.NORM_METHOD
+            )
 
-def handle_special_itemid(itemid, val_num, visit):
+            morse_normalized[hour] = common.normalize(
+                stats,
+                morse[hour],
+                stats[common.MORSE_ROWID, common.Stats_col.REF_MIN],
+                stats[common.MORSE_ROWID, common.Stats_col.REF_MAX],
+                common.MORSE_ROWID,
+                stats[common.MORSE_ROWID, common.Stats_col.VAR_TYPE],
+                common.NORM_METHOD
+            )
+
+            # Write morse/braden timelines to image
+            if braden[hour] != braden_cumulative_default_normalized:
+                visit.img[common.BRADEN_ROWID, hour:] = braden_normalized[hour]
+            if morse[hour] != morse_cumulative_default_normalized:
+                visit.img[common.MORSE_ROWID, hour:] = morse_normalized[hour]
+
+def handle_special_itemid(itemid, val_num, visit, stats, item2feature):
     """
     Handles itemids that have special meanings. Often involves directly updating
     the image for the given patient. 
     """
+    featureid = item2feature[itemid]
     if  (itemid == common.Special_itemids.AGE)          or \
         (itemid == common.Special_itemids.SEX)          or \
         (itemid == common.Special_itemids.ETHNICITY)    or \
         (itemid == common.Special_itemids.PRIOR_CA)     or \
         (itemid == common.Special_itemids.PRIOR_ADMIT):
         # Assign val_num to entire row in image
-        visit.img[itemid, :] = val_num * common.NORM_OUT_MAX
+        visit.img[itemid, :] = common.normalize(
+            stats,
+            val_num,
+            stats[featureid, common.Stats_col.REF_MIN],
+            stats[featureid, common.Stats_col.REF_MAX],
+            featureid,
+            stats[featureid, common.Stats_col.VAR_TYPE],
+            common.NORM_METHOD
+        )
     if itemid == common.Special_itemids.ADMIT_HOUR:
         hour_reel = np.mod(np.arange(visit.img.shape[1]), 24)
         hour_reel = np.roll(hour_reel, int(-val_num))

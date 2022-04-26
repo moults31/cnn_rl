@@ -20,7 +20,7 @@ FORCE_CLASS_WEIGHT = False
 CLASS_WEIGHT_RATIO = 30.0
 
 # Default number of epochs. Can be overriden in calls to train_<model>
-N_EPOCH = 20
+N_EPOCH = 8
 
 # Special patient ID where we hide the itemid to rowid mappings
 MAPPING_PATIENT_ID = 0
@@ -29,9 +29,10 @@ MAPPING_PATIENT_ID = 0
 CSV_PARSER_BATCH_SIZE = 10000000
 
 # Set range of patients to process images for. Set CSV_PARSER_PATIENTID_DO_LIMIT to False to uncap limit.
-CSV_PARSER_PATIENTID_DO_LIMIT = False
+CSV_PARSER_PATIENTID_DO_LIMIT = True
 CSV_PARSER_PATIENTID_MIN = 12817000
-CSV_PARSER_PATIENTID_MAX = 13217000
+CSV_PARSER_PATIENTID_MAX = 12917000
+# CSV_PARSER_PATIENTID_MAX = 13217000
 
 # Constants as specified in the paper
 N_HOURS = 48
@@ -90,8 +91,10 @@ class Stats_col(IntEnum):
     VAL_NUM = 1
     VAL_MIN = 2
     VAL_MAX = 3
-    VAL_DEFAULT = 4
-    N_COLS = 5
+    REF_MIN = 4
+    REF_MAX = 5
+    VAL_DEFAULT = 6
+    N_COLS = 7
 
 class Input_event_col(IntEnum):
     PATIENT_ID = 0
