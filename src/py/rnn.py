@@ -13,12 +13,12 @@ class StandardRNN(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
         super(StandardRNN, self).__init__()
-        self.lstm1 = nn.LSTM(48, 128, batch_first=True)
-        self.dropout1 = nn.Dropout(0.2)
-        self.lstm2 = nn.LSTM(128, 128, batch_first=True)
-        self.dropout2 = nn.Dropout(0.1)
-        self.fc1 = nn.Linear(19200, 2)
-        self.dropout3 = nn.Dropout(0.2)
+        self.lstm1 = nn.LSTM(input_size=48, hidden_size=128, batch_first=True)
+        self.dropout1 = nn.Dropout(p=0.2)
+        self.lstm2 = nn.LSTM(input_size=128, hidden_size=128, batch_first=True)
+        self.dropout2 = nn.Dropout(p=0.1)
+        self.fc1 = nn.Linear(in_features=19200, out_features=2)
+        self.dropout3 = nn.Dropout(p=0.2)
 
     def forward(self, x):
         x, _ = self.lstm1(x)

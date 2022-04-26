@@ -14,13 +14,13 @@ class CNN_RL(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
         super(CNN_RL, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 4)
-        self.conv2 = nn.Conv2d(32, 64, 6)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.dropout1 = nn.Dropout(0.25)
-        self.convLSTM = convLSTM.ConvLSTM(64, 8, (3,3), 1, True, True, True)
-        self.fc1 = nn.Linear(11360, 2)
-        self.dropout2 = nn.Dropout(0.25)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=4)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=6)
+        self.pool = nn.MaxPool2d(kernel_size=(2, 2))
+        self.dropout1 = nn.Dropout(p=0.25)
+        self.convLSTM = convLSTM.ConvLSTM(input_dim=64, hidden_dim=8, kernel_size=(3,3), num_layers=1, batch_first=True, bias=True, return_all_layers=True)
+        self.fc1 = nn.Linear(in_features=11360, out_features=2)
+        self.dropout2 = nn.Dropout(p=0.25)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -103,7 +103,7 @@ def train_cnn_rl(model, train_dataloader, n_epoch=common.N_EPOCH):
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 550.0
+    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 42.0
     print(f"Class weight ratio: {class_weight_ratio}")
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(common.device)

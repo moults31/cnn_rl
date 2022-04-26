@@ -13,11 +13,11 @@ class StandardCNN(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
         super(StandardCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 4)
-        self.conv2 = nn.Conv2d(32, 64, 6)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.dropout1 = nn.Dropout(0.25)
-        self.fc1 = nn.Linear(90880, 2)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=4)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=6)
+        self.pool = nn.MaxPool2d(kernel_size=(2, 2))
+        self.dropout1 = nn.Dropout(p=0.25)
+        self.fc1 = nn.Linear(in_features=90880, out_features=2)
         self.dropout2 = nn.Dropout(0.5)
 
     def forward(self, x):
