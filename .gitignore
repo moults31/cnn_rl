@@ -1,4 +1,5 @@
 data/*
 images/*
+clinical_scores/*
 src/py/__pycache__
 src/py/third_party/__pycache__

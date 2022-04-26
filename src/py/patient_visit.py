@@ -10,6 +10,7 @@ class Patient_visit:
         self.img = self.init_img(stats)
         self.braden = self.init_braden(stats, item2feature)
         self.morse = self.init_braden(stats, item2feature)
+        self.mews = self.init_mews(stats, item2feature)
 
     def init_img(self, stats: np.ndarray):
         """
@@ -37,8 +38,8 @@ class Patient_visit:
         """
         Initialize default values per row in braden score component records
         """
-        braden = np.zeros((len(common.braden_itemids), common.N_HOURS), dtype=np.float64)
-        for itemid in common.braden_itemids:
+        braden = np.zeros((len(common.braden_item2row), common.N_HOURS), dtype=np.float64)
+        for itemid in common.braden_item2row:
             featureid = item2feature[itemid]
             val_default_normalized = common.normalize(
                 stats,
@@ -49,15 +50,15 @@ class Patient_visit:
                 stats[featureid, common.Stats_col.VAR_TYPE],
                 common.NORM_METHOD
             )
-            braden[common.braden_itemids[itemid], :] = val_default_normalized
+            braden[common.braden_item2row[itemid], :] = val_default_normalized
         return braden
 
     def init_morse(self, stats, item2feature):
         """
         Initialize default values per row in morse score component records
         """
-        morse = np.zeros((len(common.morse_itemids), common.N_HOURS), dtype=np.float64)
-        for itemid in common.morse_itemids:
+        morse = np.zeros((len(common.morse_item2row), common.N_HOURS), dtype=np.float64)
+        for itemid in common.morse_item2row:
             featureid = item2feature[itemid]
             val_default_normalized = common.normalize(
                 stats,
@@ -68,5 +69,16 @@ class Patient_visit:
                 stats[featureid, common.Stats_col.VAR_TYPE],
                 common.NORM_METHOD
             )
-            morse[common.morse_itemids[itemid], :] = val_default_normalized
+            morse[common.morse_item2row[itemid], :] = val_default_normalized
         return morse
+
+    def init_mews(self, stats, item2feature):
+        """
+        Initialize default (not normalized) values per row in MEWS component records
+        """
+        mews = np.zeros((common.MEWS_rows.N_ROWS, common.N_HOURS))
+
+        for row in range(common.MEWS_rows.N_ROWS):
+            featureid = common.mews_featureids[row]
+            mews[row] = stats[featureid, common.Stats_col.VAL_DEFAULT]
+        return mews

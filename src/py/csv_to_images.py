@@ -8,6 +8,7 @@ import common
 import numpy as np
 import cv2
 import time
+import clinical_scores
 
 # Optional suffix for output image name, use for debugging.
 OUT_IMG_SUFFIX = ''
@@ -42,10 +43,12 @@ def parse_csv_to_images(csv_file: str):
             patient_id, visit_id, itemid, hour, var_type, val_num, \
                 val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag = cast_csv_row(row)
 
-            if (common.CSV_PARSER_PATIENTID_DO_LIMIT) and \
-                ((patient_id < common.CSV_PARSER_PATIENTID_MIN) or (patient_id > common.CSV_PARSER_PATIENTID_MAX)):
-                # Skip patient ids outside our range limits
-                continue
+            # Skip patient ids outside our range limits
+            if common.CSV_PARSER_PATIENTID_DO_LIMIT:
+                if patient_id < common.CSV_PARSER_PATIENTID_MIN:
+                    continue
+                if patient_id > common.CSV_PARSER_PATIENTID_MAX:
+                    break
 
             # If the hour is out of the range we care about, skip this row
             if hour >= 48:
@@ -76,7 +79,7 @@ def parse_csv_to_images(csv_file: str):
                 subject.img[feature_id, hour:] = valuenum_norm
 
             # Record clinical score component vals if relevant to this itemid
-            record_clinical_score_component(itemid, val_num, hour, subject)
+            record_clinical_score_component(itemid, val_num, hour, subject, item2feature)
 
             # Generate images if we've completed a batch
             if (i_batch >= common.CSV_PARSER_BATCH_SIZE) and (visit_id_prev != visit_id):
@@ -85,6 +88,10 @@ def parse_csv_to_images(csv_file: str):
                 gen_start_time = time.time()
                 tally_clinical_scores(patient_visits, stats, item2feature)
                 generate_images(patient_visits)
+                print("Computing clinical scores")
+                clinical_scores_start_time = time.time()
+                clinical_scores.compute_mews(stats, patient_visits)
+                print("Clinical scores took {:.2f} sec".format(time.time() - clinical_scores_start_time))
                 patient_visits.clear()
                 i_batch = 0
                 print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
@@ -110,6 +117,12 @@ def parse_csv_to_images(csv_file: str):
     tally_clinical_scores(patient_visits, stats, item2feature)
     generate_images(patient_visits)
     print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
+
+    print("Computing clinical scores")
+    clinical_scores_start_time = time.time()
+    clinical_scores.compute_mews(stats, patient_visits)
+    print("Clinical scores took {:.2f} sec".format(time.time() - clinical_scores_start_time))
+
 
 def generate_stats():
     """
@@ -170,15 +183,23 @@ def cast_csv_row(row: list):
     return patient_id, visit_id, itemid, hour, var_type, \
         val_num, val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag
 
-def record_clinical_score_component(itemid, val_num, hour, visit):
+def record_clinical_score_component(itemid, val_num, hour, visit, item2feature):
     """
     Record the value of a clinical score component for a given patient on a given hour
     """
-    if itemid in common.braden_itemids:
-        visit.braden[common.braden_itemids[itemid], hour] = val_num
+    if itemid in common.braden_item2row:
+        visit.braden[common.braden_item2row[itemid], hour] = val_num
 
-    if itemid in common.morse_itemids:
-        visit.morse[common.morse_itemids[itemid], hour] = val_num
+    if itemid in common.morse_item2row:
+        visit.morse[common.morse_item2row[itemid], hour] = val_num
+
+    feature_id = item2feature[itemid]
+    if feature_id in common.mews_featureids:
+        # Do a reverse lookup. Slow :(
+        for i in range(len(common.mews_featureids)):
+            if common.mews_featureids[i] == feature_id:
+                visit.mews[i, hour] = val_num
+
 
 def tally_clinical_scores(patient_visits, stats, item2feature):
     """
@@ -290,15 +311,11 @@ def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
 
     return diff
 
-def generate_images(patient_visits: dict, test_split: float = 0.2, val_split: float = 0.3):
+def generate_images(patient_visits: dict):
     """
     Generates an image for the given patient using OpenCV.
     Images are saved to IMAGES_DIR and named by patient_id.
     """
-
-    test_start_idx = len(patient_visits) * (1 - val_split) * (1 - test_split)
-    val_start_idx = len(patient_visits) * (1 - test_split)
-
     i = 0
     for key in patient_visits:
         visit = patient_visits[key]
@@ -306,12 +323,8 @@ def generate_images(patient_visits: dict, test_split: float = 0.2, val_split: fl
         # Determine which split this patient will fall into and set the path accordingly.
         # Todo: Add a feature for shuffling splits
         img_path = os.getenv('IMAGES_DIR')
-        if i >= test_start_idx and i < val_start_idx:
-            img_path = os.path.join(img_path, 'test')
-        elif i >= val_start_idx:
-            img_path = os.path.join(img_path, 'val')
-        else:
-            img_path = os.path.join(img_path, 'train')
+        split = common.get_split_as_string(i, len(patient_visits))
+        img_path = os.path.join(img_path, split)
 
         # Todo: Come up with a way to open in 'w' mode the first time we touch a file in a given run
         with open(os.path.join(img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='') as f:

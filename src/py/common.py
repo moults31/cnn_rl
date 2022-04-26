@@ -20,7 +20,7 @@ FORCE_CLASS_WEIGHT = False
 CLASS_WEIGHT_RATIO = 30.0
 
 # Default number of epochs. Can be overriden in calls to train_<model>
-N_EPOCH = 8
+N_EPOCH = 20
 
 # Special patient ID where we hide the itemid to rowid mappings
 MAPPING_PATIENT_ID = 0
@@ -31,8 +31,12 @@ CSV_PARSER_BATCH_SIZE = 10000000
 # Set range of patients to process images for. Set CSV_PARSER_PATIENTID_DO_LIMIT to False to uncap limit.
 CSV_PARSER_PATIENTID_DO_LIMIT = True
 CSV_PARSER_PATIENTID_MIN = 12817000
-CSV_PARSER_PATIENTID_MAX = 12917000
+CSV_PARSER_PATIENTID_MAX = 12857000
 # CSV_PARSER_PATIENTID_MAX = 13217000
+
+# Data split percentages (train will take up remainder)
+TEST_SPLIT_PCT = 0.2
+VAL_SPLIT_PCT = 0.3
 
 # Constants as specified in the paper
 N_HOURS = 48
@@ -46,6 +50,10 @@ NORM_OUT_MAX = 255
 # Annotiations file name
 ANNOTATIONS_FILE_NAME = 'labels.csv'
 
+# Clinical scores file names
+CS_MEWS_PREDS_FILE_NAME = 'mews_preds.csv'
+CS_MEWS_SCORES_FILE_NAME = 'mews_scores.csv'
+
 # Use to select Normalization Method globally
 class Norm_method(Enum):
     MINMAX = 1
@@ -53,7 +61,7 @@ class Norm_method(Enum):
 NORM_METHOD = Norm_method.MINMAX
 
 # Used for indexing braden items in patient_visit
-braden_itemids = {
+braden_item2row = {
     224054: 0,     # Braden Sensory Perception
     224055: 1,     # Braden Moisture
     224056: 2,     # Braden Activity
@@ -64,7 +72,7 @@ braden_itemids = {
 BRADEN_ROWID = 98
 
 # Used for indexing morse items in patient_visit
-morse_itemids = {
+morse_item2row = {
     227341: 0,     # Morse, History of falling (within 3 mnths)
     227342: 1,     # Morse, Secondary diagnosis
     227343: 2,     # Morse, Ambulatory aid
@@ -73,7 +81,6 @@ morse_itemids = {
     227346: 5,     # Morse, Mental status
 }
 MORSE_ROWID = 107
-
 
 # Used for indexing columns by name in stats
 class Special_itemids(IntEnum):
@@ -84,6 +91,21 @@ class Special_itemids(IntEnum):
     PRIOR_ADMIT = 4     # 4 = prior admissions in past 90 days, binary
     ADMIT_HOUR = 5      # 5 = hour of day, continuous.  NOTE: this one needs special handling as the hour represents the hour of day in military time at time of admission.  This value must be incremented across the entire timeline by the hour, and rewind to 0 if hour = 24.  range = [0...23] but must be normalized to [0...1].
     # LOC_SEVERITY = 6    # 6 = location within hospital, continuous with ref range.  In the paper, this variable indicates where the patient was located within the hospital (ICU vs. Emergency room, vs. ...).  However, the hospital location in the mimic data doesn't carry the same meaning as all the labels I could find more or less mixed/matched location with purpose for admission to the hospital making this task nearly impossible.  Therefore, I converted this variable to a health care urgency rating with 0 meaning normal and 9 meaning dire emergency.  The ratings are pulled directly from the admissions table. 
+
+# Used for indexing rows in patient_visit mews structure
+class MEWS_rows(IntEnum):
+    RESPIRATORY_RATE = 0
+    HEART_RATE = 1
+    SYSTOLIC = 2
+    AVPU = 3
+    TEMPERATURE = 4
+    HOURLY_URINE = 5
+    N_ROWS = 6
+
+# Used for mapping rows in patient_visit mews structure to featureids
+mews_featureids = [
+    9, 8, 10, 14, 7, 115
+]
 
 # Used for indexing columns by name in stats
 class Stats_col(IntEnum):
@@ -229,3 +251,14 @@ def evaluate_predictions(truth, preds, score=None, average='binary'):
     print(f"Precision {p}")
     print(f"Recall {r}")
     print(f"FScore {f}")
+
+def get_split_as_string(i, n):
+    test_start_idx = n * (1 - VAL_SPLIT_PCT) * (1 - TEST_SPLIT_PCT)
+    val_start_idx = n * (1 - TEST_SPLIT_PCT)
+
+    if i >= test_start_idx and i < val_start_idx:
+        return 'test'
+    elif i >= val_start_idx:
+        return 'val'
+    else:
+        return 'train'
