@@ -84,18 +84,11 @@ def parse_csv_to_images(csv_file: str):
             # Generate images if we've completed a batch
             if (i_batch >= common.CSV_PARSER_BATCH_SIZE) and (visit_id_prev != visit_id):
                 print(f"\nDone {i} rows")
-                print(f"Generating {len(patient_visits)} images")
-                gen_start_time = time.time()
-                tally_clinical_scores(patient_visits, stats, item2feature)
-                generate_images(patient_visits)
-                print("Computing clinical scores")
-                clinical_scores_start_time = time.time()
-                clinical_scores.compute_mews(stats, patient_visits)
-                print("Clinical scores took {:.2f} sec".format(time.time() - clinical_scores_start_time))
+                process_batch_images_and_clinical_scores(patient_visits, stats, item2feature)
                 patient_visits.clear()
                 i_batch = 0
-                print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
 
+            # Update visit_id_prev so we can track whether visit_id changes on next iter
             visit_id_prev = visit_id
 
             # Print progress indicator
@@ -105,24 +98,40 @@ def parse_csv_to_images(csv_file: str):
             i = i + 1
             i_batch = i_batch + 1
 
-    print("Parsing took {:.2f} sec".format(time.time() - parse_start_time))
-
+    # Report any itemids encountered on input that we don't have a stats mapping for
     if len(unknown_items) > 0:
         print(f"Skipped unknown items:")
         for item in unknown_items:
             print(item)
 
+    # Process the final partial batch
+    process_batch_images_and_clinical_scores(patient_visits, stats, item2feature)
+
+    print("Parsing took {:.2f} sec".format(time.time() - parse_start_time))
+
+    print("Computing MEWS baseline from generated images...")
+    mews_start_time = time.time()
+    clinical_scores.compute_evaluate_mews_from_images(stats)
+    print("\nMEWS took {:.2f} sec".format(time.time() - mews_start_time))
+
+def process_batch_images_and_clinical_scores(patient_visits, stats, item2feature):
+    """
+    Function to process a batch. Generates images, tallies braden/morse, and computes MEWS/SOFA.
+    """
+    # Generate images
     print(f"Generating {len(patient_visits)} images")
     gen_start_time = time.time()
-    tally_clinical_scores(patient_visits, stats, item2feature)
     generate_images(patient_visits)
     print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
 
+    # Tally braden/sofa
+    tally_clinical_scores(patient_visits, stats, item2feature)
+
+    # Compute MEWS/SOFA
     print("Computing clinical scores")
     clinical_scores_start_time = time.time()
     clinical_scores.compute_mews(stats, patient_visits)
     print("Clinical scores took {:.2f} sec".format(time.time() - clinical_scores_start_time))
-
 
 def generate_stats():
     """
