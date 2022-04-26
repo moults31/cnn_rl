@@ -28,6 +28,11 @@ MAPPING_PATIENT_ID = 0
 # Batch size for number of input csv rows to parse before dumping images and deleting runtime image representations
 CSV_PARSER_BATCH_SIZE = 10000000
 
+# Set range of patients to process images for. Set CSV_PARSER_PATIENTID_DO_LIMIT to False to uncap limit.
+CSV_PARSER_PATIENTID_DO_LIMIT = False
+CSV_PARSER_PATIENTID_MIN = 12817000
+CSV_PARSER_PATIENTID_MAX = 13217000
+
 # Constants as specified in the paper
 N_HOURS = 48
 N_COLS = N_HOURS
@@ -43,8 +48,41 @@ ANNOTATIONS_FILE_NAME = 'labels.csv'
 # Use to select Normalization Method globally
 class Norm_method(Enum):
     MINMAX = 1
-    CUSTOM = 3
+    CUSTOM = 2
 NORM_METHOD = Norm_method.MINMAX
+
+# Used for indexing braden items in patient_visit
+braden_itemids = {
+    224054: 0,     # Braden Sensory Perception
+    224055: 1,     # Braden Moisture
+    224056: 2,     # Braden Activity
+    224057: 3,     # Braden Mobility
+    224058: 4,     # Braden Nutrition
+    224059: 5,     # Braden Friction/Shear
+}
+BRADEN_ROWID = 98
+
+# Used for indexing morse items in patient_visit
+morse_itemids = {
+    227341: 0,     # Morse, History of falling (within 3 mnths)
+    227342: 1,     # Morse, Secondary diagnosis
+    227343: 2,     # Morse, Ambulatory aid
+    227344: 3,     # Morse, IV/Saline lock
+    227345: 4,     # Morse, Gait/Transferring
+    227346: 5,     # Morse, Mental status
+}
+MORSE_ROWID = 107
+
+
+# Used for indexing columns by name in stats
+class Special_itemids(IntEnum):
+    AGE = 0             # 0 = patient age, continuous
+    SEX = 1             # 1 = sex, binary (0=male, 1=female/other)
+    ETHNICITY = 2       # 2 = race/ethnicity, binary (0=black, 1=other)
+    PRIOR_CA = 3        # 3 = prior cardiac arrest history, binary.  Currently only showing cardiac arrest experienced in the ICU.  Cardiac arrest from prior visits or in the main hospital is a huge task to track down.
+    PRIOR_ADMIT = 4     # 4 = prior admissions in past 90 days, binary
+    ADMIT_HOUR = 5      # 5 = hour of day, continuous.  NOTE: this one needs special handling as the hour represents the hour of day in military time at time of admission.  This value must be incremented across the entire timeline by the hour, and rewind to 0 if hour = 24.  range = [0...23] but must be normalized to [0...1].
+    # LOC_SEVERITY = 6    # 6 = location within hospital, continuous with ref range.  In the paper, this variable indicates where the patient was located within the hospital (ICU vs. Emergency room, vs. ...).  However, the hospital location in the mimic data doesn't carry the same meaning as all the labels I could find more or less mixed/matched location with purpose for admission to the hospital making this task nearly impossible.  Therefore, I converted this variable to a health care urgency rating with 0 meaning normal and 9 meaning dire emergency.  The ratings are pulled directly from the admissions table. 
 
 # Used for indexing columns by name in stats
 class Stats_col(IntEnum):
@@ -137,16 +175,16 @@ def normalize(
         max = stats[feature_id][Stats_col.VAL_MAX]
 
         if var_type == Var_type.BINARY:
-            val_normalized = valuenum
+            val_normalized = np.interp(valuenum, [0.0, 1.0], [NORM_OUT_MIN, NORM_OUT_MAX])
         elif var_type == Var_type.CONTINUOUS:
             val_normalized = np.interp(valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX])
         elif var_type == Var_type.CONTINUOUS_WITH_REF:
             if valuenum < ref_min:
-                val_normalized = np.interp(valuenum, [min, ref_min], [NORM_OUT_MIN, NORM_OUT_MAX])
+                val_normalized = np.interp(valuenum, [min, ref_min], [NORM_OUT_MAX, NORM_OUT_MIN])
             elif valuenum > ref_max:
-                val_normalized = np.interp(valuenum, [ref_max, max], [NORM_OUT_MAX, NORM_OUT_MIN])
+                val_normalized = np.interp(valuenum, [ref_max, max], [NORM_OUT_MIN, NORM_OUT_MAX])
             else:
-                val_normalized = NORM_OUT_MAX
+                val_normalized = NORM_OUT_MIN
 
         return val_normalized
 
@@ -158,14 +196,6 @@ def apply_specific_transforms(valuenum: float, itemid: int) -> float:
     Applies specific transforms based on medical data associated 
     with given itemids. Configured based on clinical_variables.ods.
     """
-    # TODO: Handle any of these that need it
-    # 0 = patient age, continuous
-    # 1 = sex, binary (0=male, 1=female/other)
-    # 2 = race/ethnicity, binary (0=black, 1=other)
-    # 3 = prior cardiac arrest history, binary.  Currently only showing cardiac arrest experienced in the ICU.  Cardiac arrest from prior visits or in the main hospital is a huge task to track down.
-    # 4 = prior admissions in past 90 days, binary
-    # 5 = hour of day, continuous.  NOTE: this one needs special handling as the hour represents the hour of day in military time at time of admission.  This value must be incremented across the entire timeline by the hour, and rewind to 0 if hour = 24.  range = [0...23] but must be normalized to [0...1].
-    # 6 = location within hospital, continuous with ref range.  In the paper, this variable indicates where the patient was located within the hospital (ICU vs. Emergency room, vs. ...).  However, the hospital location in the mimic data doesn't carry the same meaning as all the labels I could find more or less mixed/matched location with purpose for admission to the hospital making this task nearly impossible.  Therefore, I converted this variable to a health care urgency rating with 0 meaning normal and 9 meaning dire emergency.  The ratings are pulled directly from the admissions table. 
 
     return valuenum
 

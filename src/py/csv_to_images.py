@@ -42,6 +42,15 @@ def parse_csv_to_images(csv_file: str):
             patient_id, visit_id, itemid, hour, var_type, val_num, \
                 val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag = cast_csv_row(row)
 
+            if (common.CSV_PARSER_PATIENTID_DO_LIMIT) and \
+                ((patient_id < common.CSV_PARSER_PATIENTID_MIN) or (patient_id > common.CSV_PARSER_PATIENTID_MAX)):
+                # Skip patient ids outside our range limits
+                continue
+
+            # If the hour is out of the range we care about, skip this row
+            if hour >= 48:
+                continue
+
             # If we don't have a row mapping for this itemid, note that down
             if not itemid in item2feature:
                 if not itemid in unknown_items:
@@ -50,27 +59,31 @@ def parse_csv_to_images(csv_file: str):
 
             # Get the object for this patient, creating one if we haven't seen them before
             if not visit_id in patient_visits:
-                patient_visits[visit_id] = patient_visit.Patient_visit(patient_id, visit_id, hospital_expire_flag)
+                patient_visits[visit_id] = patient_visit.Patient_visit(patient_id, visit_id, hospital_expire_flag, stats)
             subject = patient_visits[visit_id]
-
-            # Compute the hour that this chart event happened at, relative to admission
-            if hour >= 48:
-                continue
 
             # Lookup Feature ID
             feature_id = item2feature[itemid]
 
-            # Normalize valuenum
-            valuenum_norm = common.normalize(stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid)
+            # If this item ID falls in the range of our special ones, handle that
+            if itemid in [item.value for item in common.Special_itemids]:
+                handle_special_itemid(itemid, val_num, subject)
+            else:
+                # Otherwise, normalize valuenum
+                valuenum_norm = common.normalize(stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid)
 
-            # Write valuenum to the remainder of the appropriate row
-            # print(f"visit {visit_id} [{feature_id}, {hour}] ")
-            subject.img[feature_id, hour:] = valuenum_norm
+                # Write valuenum to the remainder of the appropriate row
+                subject.img[feature_id, hour:] = valuenum_norm
 
+            # Record clinical score component vals if relevant to this itemid
+            record_clinical_score_component(itemid, val_num, hour, subject)
+
+            # Generate images if we've completed a batch
             if (i_batch >= common.CSV_PARSER_BATCH_SIZE) and (visit_id_prev != visit_id):
                 print(f"\nDone {i} rows")
                 print(f"Generating {len(patient_visits)} images")
                 gen_start_time = time.time()
+                tally_clinical_scores(patient_visits, stats, item2feature)
                 generate_images(patient_visits)
                 patient_visits.clear()
                 i_batch = 0
@@ -94,6 +107,7 @@ def parse_csv_to_images(csv_file: str):
 
     print(f"Generating {len(patient_visits)} images")
     gen_start_time = time.time()
+    tally_clinical_scores(patient_visits, stats, item2feature)
     generate_images(patient_visits)
     print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
 
@@ -104,7 +118,6 @@ def generate_stats():
     item2feature = dict()
     stats = np.zeros((common.N_ROWS, common.Stats_col.N_COLS), dtype=np.float64)
 
-    print(f"Parsing {csv_file}")
     parse_start_time = time.time()
     i = 0
     with open(csv_file, 'r') as f:
@@ -155,6 +168,66 @@ def cast_csv_row(row: list):
     return patient_id, visit_id, itemid, hour, var_type, \
         val_num, val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag
 
+def record_clinical_score_component(itemid, val_num, hour, visit):
+    """
+    Record the value of a clinical score component for a given patient on a given hour
+    """
+    if itemid in common.braden_itemids:
+        visit.braden[common.braden_itemids[itemid], hour] = val_num
+
+    if itemid in common.morse_itemids:
+        visit.morse[common.morse_itemids[itemid], hour] = val_num
+
+def tally_clinical_scores(patient_visits, stats, item2feature):
+    """
+    Handles itemids that have special meanings. Often involves directly updating
+    the image for the given patient. 
+    """
+    # Compute bounds for normalization
+    braden_lower_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MIN] for itemid in common.braden_itemids])
+    braden_upper_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MAX] for itemid in common.braden_itemids])
+    morse_lower_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MIN] for itemid in common.morse_itemids])
+    morse_upper_bound = np.sum([stats[item2feature[itemid], common.Stats_col.VAL_MAX] for itemid in common.morse_itemids])
+
+    for key in patient_visits:
+        visit = patient_visits[key]
+
+        # Assign cumulative sum of braden/morse scores for each hour
+        braden = visit.braden.sum(axis=0)
+        morse = visit.morse.sum(axis=0)
+
+        # Normalize
+        braden = np.interp(braden, [braden_lower_bound, braden_upper_bound], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
+        morse = np.interp(morse, [morse_lower_bound, morse_upper_bound], [common.NORM_OUT_MIN, common.NORM_OUT_MAX])
+
+        # Write morse/braden timelines to image
+        for hour in range(common.N_HOURS):
+            if braden[hour] != 0:
+                visit.img[common.BRADEN_ROWID, hour:] = braden[hour]
+            if morse[hour] != 0:
+                visit.img[common.MORSE_ROWID, hour:] = morse[hour]
+
+def handle_special_itemid(itemid, val_num, visit):
+    """
+    Handles itemids that have special meanings. Often involves directly updating
+    the image for the given patient. 
+    """
+    if  (itemid == common.Special_itemids.AGE)          or \
+        (itemid == common.Special_itemids.SEX)          or \
+        (itemid == common.Special_itemids.ETHNICITY)    or \
+        (itemid == common.Special_itemids.PRIOR_CA)     or \
+        (itemid == common.Special_itemids.PRIOR_ADMIT):
+        # Assign val_num to entire row in image
+        visit.img[itemid, :] = val_num * common.NORM_OUT_MAX
+    if itemid == common.Special_itemids.ADMIT_HOUR:
+        hour_reel = np.mod(np.arange(visit.img.shape[1]), 24)
+        hour_reel = np.roll(hour_reel, int(-val_num))
+        hour_reel = (hour_reel / 23.0) * common.NORM_OUT_MAX
+        visit.img[itemid, :] = hour_reel
+
+    # if itemid == common.Special_itemids.LOC_SEVERITY:
+        # Handle this implicitly as CONTINUOUS_WITH_REF
+
 def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
     """
     Computes the difference in hours between charttime and admittime.
@@ -199,7 +272,7 @@ def generate_images(patient_visits: dict, test_split: float = 0.2, val_split: fl
         with open(os.path.join(img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='') as f:
             label_writer = writer(f, delimiter=',')
 
-            img_name = os.path.join(img_path, f"{visit.patient_id}_{visit.visit_id}{OUT_IMG_SUFFIX}.png")
+            img_name = os.path.join(img_path, f"{visit.patient_id}_{visit.visit_id}_{visit.hospital_expire_flag}{OUT_IMG_SUFFIX}.png")
             # Write label for this patient into labels.csv
             line = [c.strip() for c in f"{os.path.basename(img_name)}, {visit.hospital_expire_flag}".strip(', ').split(',')]
             label_writer.writerow(line)
