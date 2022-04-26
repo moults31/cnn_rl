@@ -1,11 +1,11 @@
-import os
+from os import stat
 import numpy as np
 import common
 import torch
-from csv import writer, reader
 from scipy.interpolate import UnivariateSpline
 
-def compute_all(stats, patient_visits):
+
+def compute_all(stats):
     """
     Main function. Computes SOFA and MEWS and evaluates them.
     """
@@ -27,7 +27,7 @@ def compute_all(stats, patient_visits):
     # Dump val split truth/preds for manual inspection
     common.dump_outputs(mews_pred_val, mews_true_val)
 
-def compute_mews(stats, patient_visits):
+def compute_mews(dataloader, stats):
     """
     Computes sofa based on https://www.dascena.com/articles/sirs-sofa-qsofa-and-mews-the-alphabet-soup
     Directly uses the image rows for PaO2, FIO2, Platelets, Bilirubin, Hypotension, GCS, and Creatinine.
@@ -37,86 +37,95 @@ def compute_mews(stats, patient_visits):
     """
     Y_pred = []
     Y_true = []
-    i = 0
-    for visit_id in patient_visits:
-        visit = patient_visits[visit_id]
-
+    for data, target in dataloader:
         # Respiratory rate
-        feature_id = common.mews_featureids[common.MEWS_rows.RESPIRATORY_RATE]
+        feature_id = 9
         bounds = [
             stats[feature_id, common.Stats_col.VAL_MIN],
             8, 9, 15, 21, 30,
             stats[feature_id, common.Stats_col.VAL_MAX],
         ]
-        scores = mews_get_score_from_bounds(visit.mews[common.MEWS_rows.RESPIRATORY_RATE], stats, feature_id, bounds)
+        scores = mews_compute_row(data, stats, feature_id, bounds)
 
         # Heart rate
-        feature_id = common.mews_featureids[common.MEWS_rows.HEART_RATE]
+        feature_id = 8
         bounds = [
             stats[feature_id, common.Stats_col.VAL_MIN],
             40, 51, 101, 111, 129,
             stats[feature_id, common.Stats_col.VAL_MAX],
         ]
-        scores = scores + mews_get_score_from_bounds(visit.mews[common.MEWS_rows.HEART_RATE], stats, feature_id, bounds)
+        scores = scores + mews_compute_row(data, stats, feature_id, bounds)
 
         # Systolic Blood Pressure
-        feature_id = common.mews_featureids[common.MEWS_rows.SYSTOLIC]
+        feature_id = 10
         bounds = [
             70, 81, 101, 200, 201, 
             stats[feature_id, common.Stats_col.VAL_MAX],
             stats[feature_id, common.Stats_col.VAL_MAX],
         ]
-        scores = scores + mews_get_score_from_bounds(visit.mews[common.MEWS_rows.SYSTOLIC], stats, feature_id, bounds)
+        scores = scores + mews_compute_row(data, stats, feature_id, bounds)
 
         # AVPU
         # TODO: Set bounds based on mapping of this variable
-        # feature_id = common.mews_featureids[common.MEWS_rows.AVPU]
+        # feature_id = 14
         # bounds = [
         #     stats[feature_id, common.Stats_col.VAL_MIN],
         #     35.0, 36.1, 38.1, 38.6,
         #     stats[feature_id, common.Stats_col.VAL_MAX],
         #     stats[feature_id, common.Stats_col.VAL_MAX],
         # ]
-        # scores = scores + mews_get_score_from_bounds(visit.mews[common.MEWS_rows.AVPU], stats, feature_id, bounds)
+        # scores = scores + mews_compute_row(data, stats, feature_id, bounds)
 
         # Temperature (C)
-        feature_id = common.mews_featureids[common.MEWS_rows.TEMPERATURE]
+        feature_id = 7
         bounds = [
             stats[feature_id, common.Stats_col.VAL_MIN],
             35.0, 36.1, 38.1, 38.6,
             stats[feature_id, common.Stats_col.VAL_MAX],
             stats[feature_id, common.Stats_col.VAL_MAX],
         ]
-        scores = scores + mews_get_score_from_bounds(visit.mews[common.MEWS_rows.TEMPERATURE], stats, feature_id, bounds)
+        scores = scores + mews_compute_row(data, stats, feature_id, bounds)
 
         # Hourly Urine
         # TODO: Set bounds based on mapping of this variable
-        # feature_id = common.mews_featureids[common.MEWS_rows.HOURLY_URINE]
+        # feature_id = 115
         # bounds = [
         #     stats[feature_id, common.Stats_col.VAL_MIN],
         #     35.0, 36.1, 38.1, 38.6,
         #     stats[feature_id, common.Stats_col.VAL_MAX],
         #     stats[feature_id, common.Stats_col.VAL_MAX],
         # ]
-        # scores = scores + mews_get_score_from_bounds(visit.mews[common.MEWS_rows.HOURLY_URINE], stats, feature_id, bounds)
+        # scores = scores + mews_compute_row(data, stats, feature_id, bounds)
 
         # MEWS predicts true for mortality if score >= 4
-        prediction = int(scores > 3)
+        predictions = torch.gt(scores, 3).int()
 
-        # Build up path, placing file in appropriate split
-        preds_path = os.getenv('CLINICAL_SCORES_DIR')
-        split = common.get_split_as_string(i, len(patient_visits))
-        preds_path = os.path.join(preds_path, split)
+        Y_pred.append(predictions)
+        Y_true.append(target)
 
-        # Todo: Come up with a way to open in 'w' mode the first time we touch a file in a given run
-        with open(os.path.join(preds_path, common.CS_MEWS_PREDS_FILE_NAME), 'a', newline='') as f:
-            mews_writer = writer(f, delimiter=',')
+    Y_pred = np.concatenate(Y_pred, axis=0)
+    Y_true = np.concatenate(Y_true, axis=0)
 
-            # Write this line of 'prediction', 'truth' to the appropriate file
-            line = [c.strip() for c in f"{prediction}, {visit.hospital_expire_flag}".strip(', ').split(',')]
-            mews_writer.writerow(line)
+    return Y_pred, Y_true
 
-        i = i + 1
+def mews_compute_row(data, stats, feature_id, bounds):
+    """
+    Computes MEWS scores for each sample in data,
+    for the row specified by feature_id.
+    Directly uses the image rows for Respiratory Rate.
+    Returns the score as an int
+    """
+    # Get the normalized data from the rows we want directly from the image
+    norm = data[:,:,feature_id,:]
+
+    # Create single-order splines so we can extrapolate 
+    # these values back to their original ranges
+    spl = get_spl_x_y(feature_id, stats)
+
+    # Do the extrapolation
+    reconst = spl(norm)
+
+    return mews_get_score_from_bounds(reconst, stats, feature_id, bounds)
 
 def mews_get_score_from_bounds(data, stats, feature_id, bounds):
     """
@@ -126,54 +135,25 @@ def mews_get_score_from_bounds(data, stats, feature_id, bounds):
     """
     rubric = [3, 2, 1, 0, 1, 2, 3]
 
-    max_score = 0
-    for hour in range(data.shape[0]):
-        score = 0
-        for i in range(len(bounds)):
-            if data[hour] == stats[feature_id, common.Stats_col.VAL_MIN]:
-                # This was a zeroed-out pixel, so we can't assign a score for it
-                continue
+    scores = []
+    for sample in range(data.shape[0]):
+        max_score = 0
+        for hour in range(data.shape[2]):
+            score = 0
+            for i in range(len(bounds)):
+                if data[sample, 0, hour] == stats[feature_id, common.Stats_col.VAL_MIN]:
+                    # This was a zeroed-out pixel, so we can't assign a score for it
+                    continue
 
-            if data[hour] < bounds[i]:
-                score = rubric[i]
-                if score > max_score:
-                    max_score = score
-                break
-    return score
+                if data[sample, 0, hour] < bounds[i]:
+                    score = rubric[i]
+                    if score > max_score:
+                        max_score = score
+                    break
+        scores.append(max_score)
 
-def evaluate_mews():
-    Y_train_pred = []
-    Y_train_true = []
-    Y_test_pred = []
-    Y_test_true = []
-    Y_val_pred = []
-    Y_val_true = []
+    return torch.LongTensor(scores)
 
-    # Read MEWS prediction and ground truth for all 3 splits
-    preds_train_path = os.path.join(os.getenv('CLINICAL_SCORES_DIR'), 'train', common.CS_MEWS_PREDS_FILE_NAME)
-    preds_test_path = os.path.join(os.getenv('CLINICAL_SCORES_DIR'), 'test', common.CS_MEWS_PREDS_FILE_NAME)
-    preds_val_path = os.path.join(os.getenv('CLINICAL_SCORES_DIR'), 'val', common.CS_MEWS_PREDS_FILE_NAME)
-
-    with open(preds_train_path, 'r') as f:
-        for row in reader(f):
-            Y_train_pred.append(int(row[0]))
-            Y_train_true.append(int(row[1]))
-    with open(preds_test_path, 'r') as f:
-        for row in reader(f):
-            Y_test_pred.append(int(row[0]))
-            Y_test_true.append(int(row[1]))
-    with open(preds_val_path, 'r') as f:
-        for row in reader(f):
-            Y_val_pred.append(int(row[0]))
-            Y_val_true.append(int(row[1]))
-
-    # Evaluate the scores' predictions against the ground truth
-    print("\nMEWS Scores from train split:")
-    common.evaluate_predictions(Y_train_true, Y_train_pred, score=Y_train_pred)
-    print("\nMEWS Scores from test split:")
-    common.evaluate_predictions(Y_test_true, Y_test_pred, score=Y_test_pred)
-    print("\nMEWS Scores from val split:")
-    common.evaluate_predictions(Y_val_true, Y_val_pred, score=Y_val_pred)
 
 def compute_sofa(dataloader):
     """
@@ -248,4 +228,4 @@ if __name__ == "__main__":
     """
     Main section for when this file is invoked directly.
     """
-    evaluate_mews()
+    compute_all()
