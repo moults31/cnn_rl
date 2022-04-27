@@ -52,7 +52,7 @@ ANNOTATIONS_FILE_NAME = 'labels.csv'
 
 # Clinical scores file names
 CS_MEWS_PREDS_FILE_NAME = 'mews_preds.csv'
-CS_MEWS_SCORES_FILE_NAME = 'mews_scores.csv'
+CS_SOFA_PREDS_FILE_NAME = 'sofa_preds.csv'
 
 # Use to select Normalization Method globally
 class Norm_method(Enum):
@@ -105,6 +105,31 @@ class MEWS_rows(IntEnum):
 # Used for mapping rows in patient_visit mews structure to featureids
 mews_featureids = [
     9, 8, 10, 14, 7, 115
+]
+
+# Used for indexing rows in patient_visit mews structure
+class SOFA_raw_rows(IntEnum):
+    PAO2 = 0
+    FIO2 = 1
+    PLATELETS = 2
+    BILIRUBIN = 3
+    HYPOTENSION = 4
+    GCS = 5
+    CREATININE = 6
+    N_ROWS = 7
+
+class SOFA_processed_rows(IntEnum):
+    RESPIRATION = 0
+    COAGULATION = 1
+    LIVER = 2
+    CARDIOVASCULAR = 3
+    CNS = 4
+    RENAL = 5
+    N_ROWS = 6
+
+# Used for mapping rows in patient_visit mews structure to featureids
+sofa_featureids = [
+    42, 13, 32, 27, -1, -1, 22
 ]
 
 # Used for indexing columns by name in stats

@@ -109,11 +109,6 @@ def parse_csv_to_images(csv_file: str):
 
     print("Parsing took {:.2f} sec".format(time.time() - parse_start_time))
 
-    print("Computing MEWS baseline from generated images...")
-    mews_start_time = time.time()
-    clinical_scores.compute_evaluate_mews_from_images(stats)
-    print("\nMEWS took {:.2f} sec".format(time.time() - mews_start_time))
-
 def process_batch_images_and_clinical_scores(patient_visits, stats, item2feature):
     """
     Function to process a batch. Generates images, tallies braden/morse, and computes MEWS/SOFA.
@@ -130,7 +125,8 @@ def process_batch_images_and_clinical_scores(patient_visits, stats, item2feature
     # Compute MEWS/SOFA
     print("Computing clinical scores")
     clinical_scores_start_time = time.time()
-    clinical_scores.compute_mews(stats, patient_visits)
+    clinical_scores.compute_mews(patient_visits, stats)
+    clinical_scores.compute_sofa(patient_visits, stats)
     print("Clinical scores took {:.2f} sec".format(time.time() - clinical_scores_start_time))
 
 def generate_stats():
@@ -207,7 +203,13 @@ def record_clinical_score_component(itemid, val_num, hour, visit, item2feature):
         # Do a reverse lookup. Slow :(
         for i in range(len(common.mews_featureids)):
             if common.mews_featureids[i] == feature_id:
-                visit.mews[i, hour] = val_num
+                visit.mews[i, hour:] = val_num
+
+    if feature_id in common.sofa_featureids:
+        # Do a reverse lookup. Slow :(
+        for i in range(len(common.sofa_featureids)):
+            if common.sofa_featureids[i] == feature_id:
+                visit.sofa[i, hour:] = val_num
 
 
 def tally_clinical_scores(patient_visits, stats, item2feature):

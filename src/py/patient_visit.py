@@ -11,6 +11,7 @@ class Patient_visit:
         self.braden = self.init_braden(stats, item2feature)
         self.morse = self.init_braden(stats, item2feature)
         self.mews = self.init_mews(stats, item2feature)
+        self.sofa = self.init_sofa(stats, item2feature)
 
     def init_img(self, stats: np.ndarray):
         """
@@ -82,3 +83,14 @@ class Patient_visit:
             featureid = common.mews_featureids[row]
             mews[row] = stats[featureid, common.Stats_col.VAL_DEFAULT]
         return mews
+
+    def init_sofa(self, stats, item2feature):
+        """
+        Initialize default (not normalized) values per row in SOFA component records
+        """
+        sofa = np.zeros((common.SOFA_raw_rows.N_ROWS, common.N_HOURS))
+
+        for row in range(common.SOFA_raw_rows.N_ROWS):
+            featureid = common.sofa_featureids[row]
+            sofa[row] = stats[featureid, common.Stats_col.VAL_DEFAULT]
+        return sofa
