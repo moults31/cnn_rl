@@ -15,7 +15,7 @@
  * Date: April 23, 2022
  ****************************************************************************/
 -- set schema
-set search_path to mimic_iv;
+set search_path to mimiciv;
 
 with val_defaults as (
 
@@ -23,7 +23,7 @@ with val_defaults as (
 	 * default values and reference ranges for clinical variables
 	 *****************************************************************/
 	-- Patient characteristics --
-	(		  select 0 pid, 0 rid, 0 itemid, 2 var_type, 0 val_num, 0 val_min, 91 val_max, 0 ref_min, 91 ref_max, 0 val_default 	-- age
+	(		  select 0 pid, 0 rid, 0 itemid, 2 var_type, 0 val_num, 0 val_min, 91 val_max, 0 ref_min, 0 ref_max, 0 val_default 	-- age
 	) union ( select 0 pid, 1 rid, 1 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- sex/gender
 	) union ( select 0 pid, 2 rid, 2 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- ethnicity
 	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
@@ -33,15 +33,15 @@ with val_defaults as (
 	-- vital signs (mimic_icu.chartevents)	
 	) union ( select 0 pid, 7 rid, 223762 itemid, 2 var_type, 37.0 val_num, 27 val_min, 42 val_max, 36.1 ref_min, 37.2 ref_max, 37 val_default		-- temperature C
 	) union ( select 0 pid, 7 rid, 223761 itemid, 2 var_type, 98.6 val_num, 90 val_min, 106 val_max, 97 ref_min, 99 ref_max, 98.6 val_default		-- temperature F
-	) union ( select 0 pid, 8 rid, 220045 itemid, 2 var_type, 86.25 val_num, 25 val_min, 230 val_max, 60 ref_min, 100 ref_max, 0 val_default		-- heart rate
+	) union ( select 0 pid, 8 rid, 220045 itemid, 2 var_type, 86.25 val_num, 25 val_min, 230 val_max, 60 ref_min, 100 ref_max, 73 val_default		-- heart rate
 	) union ( select 0 pid, 9 rid, 220210 itemid, 2 var_type, 20 val_num, 0 val_min, 60 val_max, 12 ref_min, 18 ref_max, 15 val_default				-- respiratory rate
 	) union ( select 0 pid, 10 rid, 220179 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 1
 	) union ( select 0 pid, 10 rid, 220050 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 2
 	) union ( select 0 pid, 11 rid, 220180 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default			-- blood pressure, diastolic 1
 	) union ( select 0 pid, 11 rid, 220051 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default			-- blood pressure, diastolic 2
-	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default			-- O2 saturation 1
-	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default			-- O2 saturation 2
-	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49 val_num, 0 val_min, 100 val_max, 97 ref_min, 100 ref_max, 0 val_default			-- Fraction of inspired Oxygen (Fi02)
+	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 97 val_default			-- O2 saturation 1
+	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 97 val_default			-- O2 saturation 2
+	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49 val_num, 0 val_min, 100 val_max, 97 ref_min, 100 ref_max, 0.25 val_default			-- Fraction of inspired Oxygen (Fi02)
 	) union ( select 0 pid, 14 rid, 226104 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default				-- Conscious level (AVPU)
 	-- Laboratory cultures/ blood tests (mimic_hosp.labevents)
 	-- Blood metabolic panel --
@@ -141,13 +141,13 @@ with val_defaults as (
 	) union ( select 0 pid, 90 rid, 10034 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
 	) union ( select 0 pid, 91 rid, 10035 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
 	-- Braden scores
-	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Sensory Perception
-	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Moisture
-	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Activity
-	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Mobility
-	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Nutrition
-	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 3 ref_min, 3 ref_max, 0 val_default		-- Braden Friction/Shear
-	) union ( select 0 pid, 98 rid, 8 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 18 ref_min, 23 ref_max, 0 val_default		-- Braden Cumulative Total
+	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Sensory Perception
+	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Moisture
+	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Activity
+	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Mobility
+	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Nutrition
+	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 3 ref_min, 3 ref_max, 4 val_default		-- Braden Friction/Shear
+	) union ( select 0 pid, 98 rid, 8 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 18 ref_min, 23 ref_max, 23 val_default		-- Braden Cumulative Total
 	--	Morse Fall risk scale
 	) union ( select 0 pid, 99 rid, 227341 itemid, 2 var_type, 0 val_num, 0 val_min, 25 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has history of falling?
 	) union ( select 0 pid, 100 rid, 227342 itemid, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has secondary diagnosis?
