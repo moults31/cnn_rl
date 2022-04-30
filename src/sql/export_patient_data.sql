@@ -4,12 +4,12 @@
  * This script aggregates the necessary data comprising the clinical variables used in the timelines.
  * In many cases, the data must be converted to a different format (normalized to [0...1], for example).
  *
- * Not all clinical variables have significant representation, or are located in easy to access places.
+ * Not all clinical variables have significant representation, or are located in easy to access places within mimic.
  * Best guesses and compromises were employed when necessary.
  * 
  * For variables with many idiomatic representations, or requiring lots of special case code to handle,
  * data is dumped verbatim and left for the parser to figure out as other languages
- * may be more suited to the task.
+ * may be more suited to the task than SQL.
  * 
  * Author: Matthew Lind
  * Date: April 23, 2022
@@ -17,80 +17,230 @@
 -- set schema
 set search_path to mimic_iv;
 
-with val_defaults as (
+
+with total_visits as (
+
+	-- total number of hospital visits (523,740)
+	select count(*)
+	from mimic_core.admissions a 
+	
+), visit_ids as (
+/*
+	-- Find all visits where actual time spent in hospital is >= 48 hours.
+	-- ED is recorded independently from the main hospital, but there are many records which the time
+	-- spent in both overlap, are independent, or are reversed.  
+	-- We must inspect all possible scenarios and only count time where the patient is definitively in one place.
+
+	with hosp_stays as (
+
+		-- get all visits where patient only stayed in main hospital/ICU 
+		-- (212,236 total, 212,183 if ignoring negative stay time, 149,819 >= 48 hours)
+		select a.hadm_id 
+		from mimic_core.admissions a 
+		where a.edregtime is null 
+		and a.admittime <= a.dischtime
+		and extract( epoch from age( a.dischtime , a.admittime  )) >= 172800
+		
+--	), ed_stays as ( 
+--	
+--		-- get all visits where the patient only stayed in the emergency department (234,535, but 0 visits >= 48 hours)
+--		select e.stay_id 
+--		from mimic_ed.edstays e 
+--		where e.hadm_id is null
+--		and extract( epoch from age( e.outtime, e.intime )) >= 172800
+	
+	), ed_first as (
+	
+		-- get all visits where the ed stay was completed before admission to the hospital 
+		-- (7,168 total, 4835 >= 48 hours)
+		select a.hadm_id 
+		from mimic_core.admissions a 
+		where a.edregtime is not null
+		and a.edouttime <= a.admittime 
+		and a.admittime <= a.dischtime 
+		and a.edregtime <= a.edouttime 
+		and (extract( epoch from age( a.edouttime, a.edregtime )) + extract( epoch from age( a.dischtime, a.admittime ))) >= 172800
+		
+	), hosp_first as ( 
+	
+		-- get all visits where the hosp stay was completed before being admitted to the emergency department 
+		-- (2 total, 1 >= 48 hours)
+		select a.hadm_id 
+		from mimic_core.admissions a 
+		where a.edregtime is not null
+		and a.admittime <= a.dischtime 
+		and a.edregtime <= a.edouttime 
+		and a.dischtime <= a.edregtime  
+		and (extract( epoch from age( a.edouttime, a.edregtime )) + extract( epoch from age( a.dischtime, a.admittime ))) >= 172800
+	
+	), overlapped as (
+	
+		-- get all visits where the hosp and ed visits overlap without gap in between 
+		-- (241,936 total, 181,073 >= 48 hours)
+		with overlap as ( 
+			select 
+				a.hadm_id, 
+				(case when a.admittime <= a.edregtime then a.admittime else a.edregtime end) as admittime,
+				(case when a.dischtime >= a.edouttime then a.dischtime else a.edouttime end) as dischtime
+			from mimic_core.admissions a 
+			where a.edregtime is not null
+			and (a.admittime <= a.dischtime)
+			and (a.edregtime <= a.edouttime)
+			and ( 
+				(a.edregtime < a.admittime and a.admittime < a.edouttime and a.edouttime < a.dischtime)		-- ed starts before hosp
+				or
+				(a.admittime < a.edregtime and a.edregtime < a.dischtime and a.dischtime < a.edouttime)		-- hosp starts before ed
+			)
+		)
+		select o.hadm_id
+		from overlap o
+		where extract( epoch from age( o.dischtime, o.admittime )) >= 172800
+		
+	), results as (
+		(
+			-- hosp only stays
+			select *
+			from hosp_stays
+		) union (
+			-- hosp before ed stays
+			select *
+			from hosp_first
+		) union (
+			-- ed before hosp stays
+			select *
+			from ed_first
+		) union (
+			-- hosp overlap with ed stays
+			select *
+			from overlapped
+		)
+	)
+	-- grand total of patient visits >= 48 hours
+	select distinct r.hadm_id
+	from results r
+*/	
+	select distinct a.hadm_id 
+	from mimic_core.admissions a 
+	where extract( epoch from age( a.dischtime, a.admittime )) >= 172800
+	
+), patient_ids as (
+
+	-- get all patients elligible for the study
+	select distinct a.subject_id 
+	from mimic_core.admissions a 
+	where a.hadm_id in (
+		select *
+		from visit_ids
+	)
+	
+), edstay_ids as (
+
+	select distinct e.stay_id 
+	from mimic_ed.edstays e 
+	where e.hadm_id in (
+		select *
+		from visit_ids
+	)
+        
+), val_defaults as (
 
 	/*****************************************************************
 	 * default values and reference ranges for clinical variables
+	 * 
+	 *         pid = patient id, uniquely identifies the patient.  patient id 0 defines the rules for the timelines.
+	 *         rid = row id for pid=0 (e.g. row of image file where data should be written as a timeline.
+	 *               For all other pids, rid is the visit_id within the patient's EHR.
+	 *      itemid = identifies the clinical variable (e.g. heart rate, white blood cell count, ...)
+	 *    var_type = type of data [0=binary, 1=continuous with min/max, 2=continuous with min/max normalized using ref_min, ref_max
+	 *               For all other pids, it's the hour (column id) where data should be recorded in the timeline.
+	 *     val_num = For pid=0, it's the mean average of the data for this clinical variable. 
+	 *               For all other pids it's the value of recorded measurement for the clinical variable.
+	 *     val_min = min acceptable value for this variable.  NOTE: there may be smaller values in the data.
+	 *     val_max = max acceptable value for this variable.  NOTE: there may be larger values in the data.
+	 *     ref_min = min value accepted as being within 'normal' range for the clinical variable.  
+	 * 					NOTE: records with the same itemid can have different ref_min values.
+	 *     ref_max = max value accepted as being within 'normal' range for the clinical variable.  
+	 * 					NOTE: records with the same itemid can have different ref_max values.
+	 * val_default = default (baseline) value for the clinical variable when creating the timeline.
+	 *               val_default is a hand-picked value based on assessment of the data, medical literature, and intuition.  
+	 *               Often it's similar to the mean average, but in cases where the mean average is skewed by outliers,
+	 *               val_default compensates to better estimate the true mean average.
 	 *****************************************************************/
 	-- Patient characteristics --
-	(		  select 0 pid, 0 rid, 0 itemid, 2 var_type, 0 val_num, 0 val_min, 91 val_max, 0 ref_min, 91 ref_max, 0 val_default 	-- age
-	) union ( select 0 pid, 1 rid, 1 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- sex/gender
-	) union ( select 0 pid, 2 rid, 2 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- ethnicity
-	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
-	) union ( select 0 pid, 4 rid, 4 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- prior admission to hospital within previous 90 days.
-	) union ( select 0 pid, 5 rid, 5 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 23 ref_max, 0 val_default		-- hour of day
+	(		  select 0 pid, 0 rid, 0 itemid, 2 var_type, 0 val_num, 0 val_min, 91 val_max, 0 ref_min, 0 ref_max, 0 val_default 		-- age
+	) union ( select 0 pid, 1 rid, 1 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- sex/gender
+	) union ( select 0 pid, 2 rid, 2 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- ethnicity
+	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
+	) union ( select 0 pid, 4 rid, 4 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- prior admission to hospital within previous 90 days.
+	) union ( select 0 pid, 5 rid, 5 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- hour of day
 	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 41 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- patient location -- health severity/priority
 	-- vital signs (mimic_icu.chartevents)	
-	) union ( select 0 pid, 7 rid, 223762 itemid, 2 var_type, 37.0 val_num, 27 val_min, 42 val_max, 36.1 ref_min, 37.2 ref_max, 37 val_default		-- temperature C
-	) union ( select 0 pid, 7 rid, 223761 itemid, 2 var_type, 98.6 val_num, 90 val_min, 106 val_max, 97 ref_min, 99 ref_max, 98.6 val_default		-- temperature F
-	) union ( select 0 pid, 8 rid, 220045 itemid, 2 var_type, 86.25 val_num, 25 val_min, 230 val_max, 60 ref_min, 100 ref_max, 0 val_default		-- heart rate
-	) union ( select 0 pid, 9 rid, 220210 itemid, 2 var_type, 20 val_num, 0 val_min, 60 val_max, 12 ref_min, 18 ref_max, 15 val_default				-- respiratory rate
-	) union ( select 0 pid, 10 rid, 220179 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 1
-	) union ( select 0 pid, 10 rid, 220050 itemid, 2 var_type, 120 val_num, 0 val_min, 180 val_max, 110 ref_min, 130 ref_max, 120 val_default		-- blood pressure, systolic 2
-	) union ( select 0 pid, 11 rid, 220180 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default			-- blood pressure, diastolic 1
-	) union ( select 0 pid, 11 rid, 220051 itemid, 2 var_type, 70 val_num, 0 val_min, 120 val_max, 70 ref_min, 80 ref_max, 80 val_default			-- blood pressure, diastolic 2
-	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default			-- O2 saturation 1
-	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97 val_num, 67 val_min, 100 val_max, 95 ref_min, 100 ref_max, 0 val_default			-- O2 saturation 2
-	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49 val_num, 0 val_min, 100 val_max, 97 ref_min, 100 ref_max, 0 val_default			-- Fraction of inspired Oxygen (Fi02)
-	) union ( select 0 pid, 14 rid, 226104 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default				-- Conscious level (AVPU)
+	) union ( select 0 pid, 7  rid, 223762 itemid, 2 var_type, 37.0  val_num, 27 val_min, 42  val_max, 36.1 ref_min,37.2 ref_max, 37   val_default		-- temperature C
+	) union ( select 0 pid, 7  rid, 223761 itemid, 2 var_type, 98.6  val_num, 90 val_min, 110 val_max, 97   ref_min, 99  ref_max, 98.6 val_default		-- temperature F
+	) union ( select 0 pid, 8  rid, 220045 itemid, 2 var_type, 86.25 val_num, 25 val_min, 230 val_max, 60   ref_min, 100 ref_max, 80   val_default		-- heart rate
+	) union ( select 0 pid, 9  rid, 220210 itemid, 2 var_type, 20    val_num, 0  val_min, 60  val_max, 12   ref_min, 18  ref_max, 15   val_default		-- respiratory rate
+	) union ( select 0 pid, 10 rid, 220179 itemid, 2 var_type, 120   val_num, 0  val_min, 180 val_max, 110  ref_min, 130 ref_max, 120  val_default		-- blood pressure, systolic 1
+	) union ( select 0 pid, 10 rid, 220050 itemid, 2 var_type, 120   val_num, 0  val_min, 180 val_max, 110  ref_min, 130 ref_max, 120  val_default		-- blood pressure, systolic 2
+	) union ( select 0 pid, 11 rid, 220180 itemid, 2 var_type, 70    val_num, 0  val_min, 120 val_max, 70   ref_min, 80  ref_max, 80   val_default		-- blood pressure, diastolic 1
+	) union ( select 0 pid, 11 rid, 220051 itemid, 2 var_type, 70    val_num, 0  val_min, 120 val_max, 70   ref_min, 80  ref_max, 80   val_default		-- blood pressure, diastolic 2
+	) union ( select 0 pid, 12 rid, 220277 itemid, 2 var_type, 97    val_num, 67 val_min, 100 val_max, 95   ref_min, 100 ref_max, 100  val_default		-- O2 saturation 1
+	) union ( select 0 pid, 12 rid, 228232 itemid, 2 var_type, 97    val_num, 67 val_min, 100 val_max, 95   ref_min, 100 ref_max, 100  val_default		-- O2 saturation 2
+	) union ( select 0 pid, 13 rid, 223835 itemid, 2 var_type, 49    val_num, 0  val_min, 100 val_max, 35   ref_min, 50  ref_max, 40   val_default		-- Fraction of inspired Oxygen (Fi02) - range and default are a guess
+	) union ( select 0 pid, 14 rid, 226104 itemid, 2 var_type, 0     val_num, 0  val_min, 20  val_max, 0    ref_min, 0   ref_max, 0    val_default		-- Conscious level (AVPU)
 	-- Laboratory cultures/ blood tests (mimic_hosp.labevents)
 	-- Blood metabolic panel --
-	) union ( select 0 pid, 15 rid, 50983 itemid, 2 var_type, 138.591 val_num, 67 val_min, 185 val_max, 133 ref_min, 145 ref_max, 140 val_default	-- Sodium
-	) union ( select 0 pid, 16 rid, 50971 itemid, 2 var_type, 4.188 val_num, 0 val_min, 26 val_max, 3.3 ref_min, 5.4 ref_max, 4.25 val_default		-- Potassium
-	) union ( select 0 pid, 17 rid, 50882 itemid, 2 var_type, 25.510 val_num, 0 val_min, 132 val_max, 22 ref_min, 32 ref_max, 26 val_default		-- Bicarbonate (CO2)
-	) union ( select 0 pid, 18 rid, 50868 itemid, 2 var_type, 14.236 val_num, 0 val_min, 91 val_max, 8 ref_min, 20 ref_max, 14 val_default			-- Anion Gap
-	) union ( select 0 pid, 19 rid, 50931 itemid, 2 var_type, 127.467 val_num, 0 val_min, 300 val_max, 70 ref_min, 105 ref_max, 111 val_default		-- Glucose 1
-	) union ( select 0 pid, 19 rid, 50809 itemid, 2 var_type, 127.467 val_num, 0 val_min, 300 val_max, 70 ref_min, 105 ref_max, 111 val_default		-- Glucose 2
-	) union ( select 0 pid, 20 rid, 50893 itemid, 2 var_type, 8.791 val_num, 0 val_min, 132 val_max, 8.4 ref_min, 10.3 ref_max, 9 val_default		-- Calcium
-	) union ( select 0 pid, 21 rid, 51006 itemid, 2 var_type, 23.866 val_num, 0 val_min, 200 val_max, 6 ref_min, 20 ref_max, 18 val_default			-- Blood Urea Nitrogen (BUN) 1
-	) union ( select 0 pid, 21 rid, 52647 itemid, 2 var_type, 23.866 val_num, 0 val_min, 200 val_max, 6 ref_min, 20 ref_max, 18 val_default			-- Blood Urea Nitrogen (BUN) 2
-	) union ( select 0 pid, 22 rid, 50912 itemid, 2 var_type, 1.329 val_num, 0 val_min, 100 val_max, 0.45 ref_min, 1.15 ref_max, 0 val_default		-- Serium Creatinine (SCr)
-	) union ( select 0 pid, 23 rid, 11111 itemid, 2 var_type, 0 val_num, 0 val_min, 0 val_max, 0 ref_min, 0 ref_max, 0 val_default					-- BUN / SCr ratio
-	) union ( select 0 pid, 24 rid, 50970 itemid, 2 var_type, 3.555 val_num, 0 val_min, 50 val_max, 2.7 ref_min, 4.5 ref_max, 3.45 val_default		-- Phosphate
+	) union ( select 0 pid, 15 rid, 50983 itemid, 2 var_type, 138.591 val_num, 67 val_min, 185 val_max, 133 ref_min, 145  ref_max, 140  val_default		-- Sodium
+	) union ( select 0 pid, 16 rid, 50971 itemid, 2 var_type, 4.188   val_num, 0  val_min, 26  val_max, 3.3 ref_min, 5.4  ref_max, 4.25 val_default		-- Potassium
+	) union ( select 0 pid, 17 rid, 50882 itemid, 2 var_type, 25.510  val_num, 0  val_min, 132 val_max, 22  ref_min, 32   ref_max, 26   val_default		-- Bicarbonate (CO2)
+	) union ( select 0 pid, 18 rid, 50868 itemid, 2 var_type, 14.236  val_num, 0  val_min, 91  val_max, 8   ref_min, 20   ref_max, 14   val_default		-- Anion Gap
+	) union ( select 0 pid, 19 rid, 50931 itemid, 2 var_type, 127.467 val_num, 0  val_min, 300 val_max, 70  ref_min, 105  ref_max, 111  val_default		-- Glucose 1
+	) union ( select 0 pid, 19 rid, 50809 itemid, 2 var_type, 127.467 val_num, 0  val_min, 300 val_max, 70  ref_min, 105  ref_max, 111  val_default		-- Glucose 2
+	) union ( select 0 pid, 20 rid, 50893 itemid, 2 var_type, 8.791   val_num, 0  val_min, 132 val_max, 8.4 ref_min, 10.3 ref_max, 9    val_default		-- Calcium
+	) union ( select 0 pid, 21 rid, 51006 itemid, 2 var_type, 23.866  val_num, 0  val_min, 200 val_max, 6   ref_min, 20   ref_max, 18   val_default		-- Blood Urea Nitrogen (BUN) 1
+	) union ( select 0 pid, 21 rid, 52647 itemid, 2 var_type, 23.866  val_num, 0  val_min, 200 val_max, 6   ref_min, 20   ref_max, 18   val_default		-- Blood Urea Nitrogen (BUN) 2
+	) union ( select 0 pid, 22 rid, 50912 itemid, 2 var_type, 1.329   val_num, 0  val_min, 100 val_max, 0.45 ref_min,1.15 ref_max, 0    val_default		-- Serium Creatinine (SCr)
+	) union ( select 0 pid, 23 rid, 11111 itemid, 2 var_type, 0       val_num, 0  val_min, 0   val_max, 0   ref_min, 0    ref_max, 0    val_default		-- BUN / SCr ratio
+	) union ( select 0 pid, 24 rid, 50970 itemid, 2 var_type, 3.555   val_num, 0  val_min, 50  val_max, 2.7 ref_min, 4.5  ref_max, 3.45 val_default		-- Phosphate
 	-- LiverFunction Test -- (mimic_hosp.labevents)
-	) union ( select 0 pid, 25 rid, 50976 itemid, 2 var_type, 6.838 val_num, 0 val_min, 19 val_max, 6.4 ref_min, 8.3 ref_max, 6.85 val_default		-- Total Protein
-	) union ( select 0 pid, 26 rid, 50862 itemid, 2 var_type, 3.782 val_num, 0 val_min, 36 val_max, 3.5 ref_min, 5.2 ref_max, 3.85 val_default		-- Albumin
-	) union ( select 0 pid, 27 rid, 50885 itemid, 2 var_type, 2.022 val_num, 0 val_min, 87 val_max, 0 ref_min, 1.5 ref_max, 1.25 val_default		-- Total Bilirubin
-	) union ( select 0 pid, 28 rid, 50878 itemid, 2 var_type, 34.952 val_num, 0 val_min, 150 val_max, 0 ref_min, 40 ref_max, 30.5 val_default		-- AST (SGOT)
-	) union ( select 0 pid, 29 rid, 50863 itemid, 2 var_type, 91.136 val_num, 0 val_min, 200 val_max, 40 ref_min, 115 ref_max, 86 val_default		-- Alkaline Phosphatase
+	) union ( select 0 pid, 25 rid, 50976 itemid, 2 var_type, 6.838  val_num, 0 val_min, 19  val_max, 6.4 ref_min, 8.3 ref_max, 6.85 val_default		-- Total Protein
+	) union ( select 0 pid, 26 rid, 50862 itemid, 2 var_type, 3.782  val_num, 0 val_min, 36  val_max, 3.5 ref_min, 5.2 ref_max, 3.85 val_default		-- Albumin
+	) union ( select 0 pid, 27 rid, 50885 itemid, 2 var_type, 2.022  val_num, 0 val_min, 87  val_max, 0   ref_min, 1.5 ref_max, 1.25 val_default		-- Total Bilirubin
+	) union ( select 0 pid, 28 rid, 50878 itemid, 2 var_type, 34.952 val_num, 0 val_min, 150 val_max, 0   ref_min, 40  ref_max, 30.5 val_default		-- AST (SGOT)
+	) union ( select 0 pid, 29 rid, 50863 itemid, 2 var_type, 91.136 val_num, 0 val_min, 200 val_max, 40  ref_min, 115 ref_max, 86   val_default		-- Alkaline Phosphatase
 	-- Complete Blood Count (CBC) --- (mimic_hosp.labevents)
-	) union ( select 0 pid, 30 rid, 51300 itemid, 2 var_type, 8.784 val_num, 0 val_min, 200 val_max, 4 ref_min, 11 ref_max, 8.25 val_default		-- White blood Cells (WBC) 1
-	) union ( select 0 pid, 30 rid, 51301 itemid, 2 var_type, 8.784 val_num, 0 val_min, 200 val_max, 4 ref_min, 11 ref_max, 8.25 val_default		-- White blood Cells (WBC) 2
-	) union ( select 0 pid, 31 rid, 51222 itemid, 2 var_type, 11.068 val_num, 0 val_min, 98 val_max, 13.7 ref_min, 17.5 ref_max, 11.5 val_default		-- Hemoglobin 1
-	) union ( select 0 pid, 31 rid, 50811 itemid, 2 var_type, 11.068 val_num, 0 val_min, 98 val_max, 12 ref_min, 18 ref_max, 11.5 val_default		-- Hemoglobin 2
-	) union ( select 0 pid, 32 rid, 51265 itemid, 2 var_type, 232.658 val_num, 0 val_min, 3000 val_max, 150 ref_min, 440 ref_max, 226 val_default		-- Platelet Count
+	) union ( select 0 pid, 30 rid, 51300 itemid, 2 var_type, 8.784   val_num, 0 val_min, 200  val_max, 4    ref_min, 11   ref_max, 8.25 val_default	-- White blood Cells (WBC) 1
+	) union ( select 0 pid, 30 rid, 51301 itemid, 2 var_type, 8.784   val_num, 0 val_min, 200  val_max, 4    ref_min, 11   ref_max, 8.25 val_default	-- White blood Cells (WBC) 2
+	) union ( select 0 pid, 31 rid, 51222 itemid, 2 var_type, 11.068  val_num, 0 val_min, 98   val_max, 13.7 ref_min, 17.5 ref_max, 11.5 val_default	-- Hemoglobin 1
+	) union ( select 0 pid, 31 rid, 50811 itemid, 2 var_type, 11.068  val_num, 0 val_min, 98   val_max, 12   ref_min, 18   ref_max, 11.5 val_default	-- Hemoglobin 2
+	) union ( select 0 pid, 32 rid, 51265 itemid, 2 var_type, 232.658 val_num, 0 val_min, 3000 val_max, 150  ref_min, 440  ref_max, 226  val_default	-- Platelet Count
 	-- Other Labs -- (mimic_hosp.labevents)
-	) union ( select 0 pid, 33 rid, 50813 itemid, 2 var_type, 2.269 val_num, 0 val_min, 132 val_max, 0.5 ref_min, 2 ref_max, 2.05 val_default		-- Lactate 
-	) union ( select 0 pid, 34 rid, 51002 itemid, 2 var_type, 0.462 val_num, 0 val_min, 20 val_max, 0 ref_min, 0.01 ref_max, 0.27 val_default		-- Troponin I (no results)
-	) union ( select 0 pid, 34 rid, 51003 itemid, 2 var_type, 0.462 val_num, 0 val_min, 20 val_max, 0 ref_min, 0.01 ref_max, 0.27 val_default		-- Troponin T
-	) union ( select 0 pid, 35 rid, 50820 itemid, 2 var_type, 7.372 val_num, 0 val_min, 9 val_max, 7.35 ref_min, 7.45 ref_max, 7.4 val_default		-- pH (blood)
-	) union ( select 0 pid, 36 rid, 51984 itemid, 2 var_type, 38.429 val_num, 0 val_min, 160 val_max, 0 ref_min, 0 ref_max, 0 val_default			-- Ketones 
-	) union ( select 0 pid, 37 rid, 50902 itemid, 2 var_type, 0 val_num, 0 val_min, 200 val_max, 115 ref_min, 120 ref_max, 0 val_default			-- Chloride 
-	) union ( select 0 pid, 38 rid, 51237 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default	-- International Normalized Ration (INR)  1
-	) union ( select 0 pid, 38 rid, 51675 itemid, 2 var_type, 1.614 val_num, 0 val_min, 27.5 val_max, 0.9 ref_min, 1.1 ref_max, 1.45 val_default	-- International Normalized Ration (INR)  2
-	) union ( select 0 pid, 39 rid, 50956 itemid, 2 var_type, 48.835 val_num, 0 val_min, 300 val_max, 0 ref_min, 60 ref_max, 38.5 val_default		-- Lipase
-	) union ( select 0 pid, 40 rid, 51250 itemid, 2 var_type, 90.945 val_num, 0 val_min, 161 val_max, 80 ref_min, 100 ref_max, 91 val_default		-- Mean Corpuscular Volume (MCV)
-	) union ( select 0 pid, 41 rid, 50818 itemid, 2 var_type, 43.335 val_num, 0 val_min, 246 val_max, 35 ref_min, 45 ref_max, 42 val_default		-- Partial pressure carbon dioxide (PaCO2)
-	) union ( select 0 pid, 42 rid, 50821 itemid, 2 var_type, 126.086 val_num, 0 val_min, 600 val_max, 85 ref_min, 105 ref_max, 100 val_default		-- Partial pressure Oxygen (PaO2)
-	) union ( select 0 pid, 43 rid, 51275 itemid, 2 var_type, 42.579 val_num, 0 val_min, 200 val_max, 25 ref_min, 36.5 ref_max, 36 val_default		-- Partial Thromboplastin Time (PTT)
-	) union ( select 0 pid, 44 rid, 51277 itemid, 2 var_type, 15.176 val_num, 0 val_min, 161 val_max, 10.5 ref_min, 15.5 ref_max, 14.8 val_default	-- Red Cell Distribution Width (RDW)
+	) union ( select 0 pid, 33 rid, 50813 itemid, 2 var_type, 2.269   val_num, 0 val_min, 132  val_max, 0.5  ref_min, 2    ref_max, 2.05 val_default	-- Lactate 
+	) union ( select 0 pid, 34 rid, 51002 itemid, 2 var_type, 0.462   val_num, 0 val_min, 20   val_max, 0    ref_min, 0.01 ref_max, 0.27 val_default	-- Troponin I (no results)
+	) union ( select 0 pid, 34 rid, 51003 itemid, 2 var_type, 0.462   val_num, 0 val_min, 20   val_max, 0    ref_min, 0.01 ref_max, 0.27 val_default	-- Troponin T
+	) union ( select 0 pid, 35 rid, 50820 itemid, 2 var_type, 7.372   val_num, 0 val_min, 9    val_max, 7.35 ref_min, 7.45 ref_max, 7.4  val_default	-- pH (blood)
+	) union ( select 0 pid, 36 rid, 51984 itemid, 2 var_type, 38.43   val_num, 0 val_min, 160  val_max, 0    ref_min, 0    ref_max, 0    val_default	-- Ketones 
+	) union ( select 0 pid, 37 rid, 50902 itemid, 2 var_type, 0       val_num, 0 val_min, 200  val_max, 115  ref_min, 120  ref_max, 0    val_default	-- Chloride 
+	) union ( select 0 pid, 38 rid, 51237 itemid, 2 var_type, 1.614   val_num, 0 val_min, 27.5 val_max, 0.9  ref_min, 1.1  ref_max, 1.45 val_default	-- International Normalized Ration (INR)  1
+	) union ( select 0 pid, 38 rid, 51675 itemid, 2 var_type, 1.614   val_num, 0 val_min, 27.5 val_max, 0.9  ref_min, 1.1  ref_max, 1.45 val_default	-- International Normalized Ration (INR)  2
+	) union ( select 0 pid, 39 rid, 50956 itemid, 2 var_type, 48.835  val_num, 0 val_min, 300  val_max, 0    ref_min, 60   ref_max, 38.5 val_default	-- Lipase
+	) union ( select 0 pid, 40 rid, 51250 itemid, 2 var_type, 90.945  val_num, 0 val_min, 161  val_max, 80   ref_min, 100  ref_max, 91   val_default	-- Mean Corpuscular Volume (MCV)
+	) union ( select 0 pid, 41 rid, 50818 itemid, 2 var_type, 43.335  val_num, 0 val_min, 246  val_max, 35   ref_min, 45   ref_max, 42   val_default	-- Partial pressure carbon dioxide (PaCO2)
+	) union ( select 0 pid, 42 rid, 50821 itemid, 2 var_type, 126.086 val_num, 0 val_min, 600  val_max, 85   ref_min, 105  ref_max, 100  val_default	-- Partial pressure Oxygen (PaO2)
+	) union ( select 0 pid, 43 rid, 51275 itemid, 2 var_type, 42.579  val_num, 0 val_min, 200  val_max, 25   ref_min, 36.5 ref_max, 36   val_default	-- Partial Thromboplastin Time (PTT)
+	) union ( select 0 pid, 44 rid, 51277 itemid, 2 var_type, 15.176  val_num, 0 val_min, 161  val_max, 10.5 ref_min, 15.5 ref_max, 14.8 val_default	-- Red Cell Distribution Width (RDW)
 	-- Interventions --
-	) union ( select 0 pid, 45 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis
+	) union ( select 0 pid, 45 rid, 25955  itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis (SCUF)
+	) union ( select 0 pid, 45 rid, 225802 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis (CRRT)	
+	) union ( select 0 pid, 45 rid, 225803 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis (CVVHD)
+	) union ( select 0 pid, 45 rid, 225805 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis (Peritoneal Dialysis)
+	) union ( select 0 pid, 45 rid, 225809 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis (CVVHDF)
+	) union ( select 0 pid, 45 rid, 225441 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Dialysis (HemoDialysis)
 	) union ( select 0 pid, 46 rid, 225828 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Bolus - 0.9% Sodium Chloride / Normal Saline
 	) union ( select 0 pid, 46 rid, 225158 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- IV Bolus - Lactated Ringers
 	) union ( select 0 pid, 47 rid, 220864 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Albumin 5%
 	) union ( select 0 pid, 47 rid, 220862 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Albumin 25%
-	) union ( select 0 pid, 48 rid, 11111 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using Ventilator
+	) union ( select 0 pid, 48 rid, 225792 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using Ventilator (Invasive)
+	) union ( select 0 pid, 48 rid, 225794 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using Ventilator (Non-invasive)
 	) union ( select 0 pid, 49 rid, 227579 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (EPAP)
 	) union ( select 0 pid, 49 rid, 227580 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (IPAP)
 	) union ( select 0 pid, 49 rid, 227581 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Using BiPAP (bipap bpm (S/T backup)
@@ -141,33 +291,33 @@ with val_defaults as (
 	) union ( select 0 pid, 90 rid, 10034 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
 	) union ( select 0 pid, 91 rid, 10035 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
 	-- Braden scores
-	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Sensory Perception
-	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Moisture
-	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Activity
-	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Mobility
-	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 0 val_default		-- Braden Nutrition
-	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 3 ref_min, 3 ref_max, 0 val_default		-- Braden Friction/Shear
-	) union ( select 0 pid, 98 rid, 8 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 18 ref_min, 23 ref_max, 0 val_default		-- Braden Cumulative Total
+	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Sensory Perception
+	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Moisture
+	) union ( select 0 pid, 94 rid, 224056 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Activity
+	) union ( select 0 pid, 95 rid, 224057 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Mobility
+	) union ( select 0 pid, 96 rid, 224058 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Nutrition
+	) union ( select 0 pid, 97 rid, 224059 itemid, 2 var_type, 0 val_num, 0 val_min, 3 val_max, 3 ref_min, 3 ref_max, 3 val_default		-- Braden Friction/Shear
+	) union ( select 0 pid, 98 rid, 8      itemid, 2 var_type, 0 val_num, 0 val_min,23 val_max,18 ref_min,23 ref_max, 0 val_default		-- Braden Cumulative Total
 	--	Morse Fall risk scale
-	) union ( select 0 pid, 99 rid, 227341 itemid, 2 var_type, 0 val_num, 0 val_min, 25 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has history of falling?
-	) union ( select 0 pid, 100 rid, 227342 itemid, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient has secondary diagnosis?
-	) union ( select 0 pid, 101 rid, 227343 itemid, 2 var_type, 0 val_num, 0 val_min, 30 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient use ambulatory aid?
-	) union ( select 0 pid, 102 rid, 227344 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, patient receiving IV therapy or Heparin Lock?
-	) union ( select 0 pid, 103 rid, 227345 itemid, 2 var_type, 0 val_num, 0 val_min, 20 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, how is patient's gait?
-	) union ( select 0 pid, 104 rid, 227346 itemid, 2 var_type, 0 val_num, 0 val_min, 15 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, what is patient's mental status?
-	) union ( select 0 pid, 105 rid, 227348 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient low risk?
-	) union ( select 0 pid, 106 rid, 227349 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Morse, is patient high risk?
-	) union ( select 0 pid, 107 rid, 9 itemid, 2 var_type, 0 val_num, 0 val_min, 125 val_max, 0 ref_min, 25 ref_max, 0 val_default		-- Morse, cumulative score
+	) union ( select 0 pid, 99  rid, 227341 itemid, 2 var_type, 0 val_num, 0 val_min, 25  val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, patient has history of falling?
+	) union ( select 0 pid, 100 rid, 227342 itemid, 2 var_type, 0 val_num, 0 val_min, 15  val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, patient has secondary diagnosis?
+	) union ( select 0 pid, 101 rid, 227343 itemid, 2 var_type, 0 val_num, 0 val_min, 30  val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, patient use ambulatory aid?
+	) union ( select 0 pid, 102 rid, 227344 itemid, 2 var_type, 0 val_num, 0 val_min, 20  val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, patient receiving IV therapy or Heparin Lock?
+	) union ( select 0 pid, 103 rid, 227345 itemid, 2 var_type, 0 val_num, 0 val_min, 20  val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, how is patient's gait?
+	) union ( select 0 pid, 104 rid, 227346 itemid, 2 var_type, 0 val_num, 0 val_min, 15  val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, what is patient's mental status?
+	) union ( select 0 pid, 105 rid, 227348 itemid, 0 var_type, 0 val_num, 0 val_min, 1   val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, is patient low risk?  NOTE: not included in cumulative score
+	) union ( select 0 pid, 106 rid, 227349 itemid, 0 var_type, 0 val_num, 0 val_min, 1   val_max, 0 ref_min, 0  ref_max, 0 val_default	-- Morse, is patient high risk? NOTE: not included in cumulative score.
+	) union ( select 0 pid, 107 rid, 9      itemid, 2 var_type, 0 val_num, 0 val_min, 125 val_max, 0 ref_min, 25 ref_max, 0 val_default	-- Morse, cumulative score
 	-- Diagnostics / Urinary
-	) union ( select 0 pid, 108 rid, 225402 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- EKG
-	) union ( select 0 pid, 109 rid, 225432 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- TTE
-	) union ( select 0 pid, 110 rid, 225459 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Chest X-ray
-	) union ( select 0 pid, 110 rid, 229581 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Chest X-ray (portable)
-	) union ( select 0 pid, 111 rid, 225457 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Abdomen X-ray
-	) union ( select 0 pid, 112 rid, 221214 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- CT Scan (head, neck, chest, and abdomen)
-	) union ( select 0 pid, 112 rid, 229582 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- CT Scan (head, neck, chest, and abdomen - portable
-	) union ( select 0 pid, 113 rid, 221217 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Ultrasound
-	) union ( select 0 pid, 114 rid, 225401 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Blood Culture Order
+	) union ( select 0 pid, 108 rid, 225402 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- EKG
+	) union ( select 0 pid, 109 rid, 225432 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- TTE
+	) union ( select 0 pid, 110 rid, 225459 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Chest X-ray
+	) union ( select 0 pid, 110 rid, 229581 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Chest X-ray (portable)
+	) union ( select 0 pid, 111 rid, 225457 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Abdomen X-ray
+	) union ( select 0 pid, 112 rid, 221214 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- CT Scan (head, neck, chest, and abdomen)
+	) union ( select 0 pid, 112 rid, 229582 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- CT Scan (head, neck, chest, and abdomen - portable
+	) union ( select 0 pid, 113 rid, 221217 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Ultrasound
+	) union ( select 0 pid, 114 rid, 225401 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Blood Culture Order
 	) union ( select 0 pid, 115 rid, 226627 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, OR Urine
 	) union ( select 0 pid, 115 rid, 226631 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, PACU Urine
 	) union ( select 0 pid, 115 rid, 227489 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default	-- Urine, U Irrigant/Urine Volume Out
@@ -252,30 +402,6 @@ with val_defaults as (
 	) union ( select 1 active, 'TPN Rate Not Changed'                      med_action
 	)
 	
-), patient_ids as (
-
-	/***********************************
-	 * Patients - find all patients admitted to hospital who stayed at least 48 hours.
-	 ***********************************/
-	select distinct a.subject_id
-	from mimic_core.admissions a
-	where extract( epoch from age( a.dischtime, a.admittime ) ) >= 172800
---	and subject_id between 10000000 and 10100000
-	
-), visit_ids as (
-
-	/***********************************
-	 * Visits - find all patients stays >= 48 hours.
-	 ***********************************/
-	select distinct a.hadm_id
-	from mimic_core.admissions a
-	where extract( epoch from age( a.dischtime, a.admittime ) ) >= 172800
-	-- restrict patient cohort size by consulting patient_ids generated earlier:
-    and a.subject_id in (
-        select *
-        from patient_ids
-	)
-	
 ), patient_chars as (
 
 	/**************************************
@@ -283,7 +409,7 @@ with val_defaults as (
 	 **********************************************/
 	(
 		-- age (normalized to range 0...100)
-		select p.subject_id, a.hadm_id, 0 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", p.anchor_age as val_num, 0 as val_min, 100 as val_max, 0 as ref_min, 91 as ref_max, 0 as val_default, a.hospital_expire_flag
+		select p.subject_id, a.hadm_id, 0 as itemid, a.admittime, a.admittime as charttime, 2 as var_type, p.anchor_age as val_num, 0 as val_min, 100 as val_max, 0 as ref_min, 91 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_core.patients p 
 		on a.subject_id = p.subject_id
 		and a.hadm_id in (
@@ -293,7 +419,7 @@ with val_defaults as (
 		
 	) union (
 		-- sex/gender (0=male, 1=female/other)
-		select p.subject_id, a.hadm_id, 1 as itemid, a.admittime, a.admittime as charttime, 0 as "var_type", (case when p.gender = 'M' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
+		select p.subject_id, a.hadm_id, 1 as itemid, a.admittime, a.admittime as charttime, 0 as var_type, (case when p.gender = 'M' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_core.patients p 
 		on a.subject_id = p.subject_id
 		and a.hadm_id in (
@@ -303,7 +429,7 @@ with val_defaults as (
 		
 	) union (
 		-- race (0=black/african american, 1=other)
-		select p.subject_id, a.hadm_id, 2 as itemid, a.admittime, a.admittime as charttime, 0 as "var_type", (case when a.ethnicity = 'BLACK/AFRICAN AMERICAN' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
+		select p.subject_id, a.hadm_id, 2 as itemid, a.admittime, a.admittime as charttime, 0 as var_type, (case when a.ethnicity = 'BLACK/AFRICAN AMERICAN' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_core.patients p 
 		on a.subject_id = p.subject_id
 		and a.hadm_id in (
@@ -360,7 +486,7 @@ with val_defaults as (
 	
 		-- hour of day.  compute hour of day in military time upon admission to hospital.  
 		-- This must be incremented hourly for first 48 hours of the visit.
-		select p.subject_id, a.hadm_id, 5 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", (extract( hour from a.admittime)) as val_num, 0 as val_min, 23 as val_max, 0 as ref_min, 23 as ref_max, 0 as val_default, a.hospital_expire_flag
+		select p.subject_id, a.hadm_id, 5 as itemid, a.admittime, a.admittime as charttime, 2 as var_type, (extract( hour from a.admittime)) as val_num, 0 as val_min, 23 as val_max, 0 as ref_min, 23 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_core.patients p 
 		on a.subject_id = p.subject_id 
 		where a.hadm_id is not null
@@ -434,13 +560,13 @@ with val_defaults as (
 			from visit_ids
 		)
 		and extract( epoch from age( ht.intime, a.admittime )) between 0 and 172800
-
---		order by t.subject_id asc, t.intime asc ;
-		
+	)
+	
+	
 		-- patient severity/priority (how serious is the situation based on where they checked into the hospital)
 --	) union (
 --		-- patient admission reason.  Used in place of patient location.
---		select p.subject_id, a.hadm_id, 6 as itemid, a.admittime, a.admittime as charttime, 2 as "var_type", 
+--		select p.subject_id, a.hadm_id, 6 as itemid, a.admittime, a.admittime as charttime, 2 as var_type, 
 --		(case 
 --			when a.admission_type = 'ELECTIVE'               then 1
 --			when a.admission_type = 'OBSERVATION ADMIT'      then 2
@@ -459,41 +585,30 @@ with val_defaults as (
 --			select *
 --			from visit_ids
 --		)
-	)
 
 ), chart_events as (
 
 	/******************************************
 	 * Vital signs and interventions - ICU charted events
 	 *******************************************/
-	( 
-		-- consider adding 'warning' field
-		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, 0 as "var_type", 1 as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
+	-- use 2-pass system to aggregate data (because it's faster)
+	-- 1st pass collects all variables of interest filtered by first 48 hours after admission
+	-- 2nd pass partitions data into subsets by variable type, then maps to val_defaults to shape results.
+	with vitals as (
+		-- select all values of interest within first 48 hours
+	
+		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.valuenum, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_icu.chartevents c
 		on a.subject_id = c.subject_id 
 		where c.hadm_id is not null
 		and c.valuenum is not null
 		and c.itemid in (
-			-- ventilation (convert to binary)
+
 			227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow, 
 			227583, 						-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
 			227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
-			226169							-- using suction (clear the airways?).  values = 0|1
-	
-		) and c.hadm_id in (
-			select *
-			from visit_ids
-		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
-		
-	) union (
-		-- consider adding 'warning' field
-		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, 1 as "var_type", c.valuenum as val_num, 0 as val_min, 999999 as val_max, 0 as ref_min, 999 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.chartevents c
-		on a.subject_id = c.subject_id 
-		where c.hadm_id is not null
-		and c.valuenum is not null
-		and c.itemid in (
-		
+			226169,							-- using suction (clear the airways?).  values = 0|1
+			
 			-- vital signs (continuous)
 			223835, 					-- FiO2. 223835=Fraction of Inspired O2.  
 			220045, 					-- Heart rate
@@ -503,9 +618,6 @@ with val_defaults as (
 			220179, 220050,   			-- Blood pressure, systolic.
 			220180, 220051,				-- Blood pressure, diastolic
 			220277, 228232,				-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
-			
-			-- intervention itemids
-			223900,						-- Glasgow Coma "Motor" score
 			
 			-- morse / braden scores (continuous)
 			224054,		-- Braden Sensory Perception
@@ -522,45 +634,87 @@ with val_defaults as (
 			227345,		-- Morse, Gait/Transferring
 			227346,		-- Morse, Mental status
 			227348,		-- Morse score, is Low risk (25-50) interventions
-			227349		-- Morse score, is High risk (>51) interventions
-	
+			227349 		-- Morse score, is High risk (>51) interventions
+			
 		) and c.hadm_id in (
 			select *
 			from visit_ids
 		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
-	) union ( 
+		
+	)
+	-- shape and mold the subsets within the selection, then merge.
+	-- we do a 2-pass system because it's faster.
+	(
+		-- binary variables
+		select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, 1 as val_num, d.val_min, d.val_max, d.ref_min, d.ref_max, d.val_default, v.hospital_expire_flag
+		from vitals v join val_defaults d
+		on v.itemid = d.itemid
+		where v.valuenum is not null 
+		and v.valuenum > 0
+		and v.itemid in ( 
+			227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow, 
+			227583, 						-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
+			227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
+			226169
+		)
+
+	) union (
+		-- continuous variables 
+		select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, v.valuenum as val_num, d.val_min, d.val_max, d.ref_min, d.ref_max, d.val_default, v.hospital_expire_flag
+		from vitals v join val_defaults d
+		on v.itemid = d.itemid
+		where v.valuenum is not null 
+		and v.itemid in ( 
+			223835, 					-- FiO2. 223835=Fraction of Inspired O2.  
+			220045, 					-- Heart rate
+			223762,						-- Temperature C
+			223761,						-- Temperature F.
+			220210, 					-- Respiratory Rate
+			220179, 220050,   			-- Blood pressure, systolic.
+			220180, 220051,				-- Blood pressure, diastolic
+			220277, 228232,				-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
+			
+			-- morse / braden scores (continuous)
+			224054,		-- Braden Sensory Perception
+			224055,		-- Braden Moisture
+			224056,		-- Braden Activity
+			224057,		-- Braden Mobility
+			224058,		-- Braden Nutrition
+			224059,		-- Braden Friction/Shear
+			
+			227341,		-- Morse, History of falling (within 3 mnths)
+			227342,		-- Morse, Secondary diagnosis
+			227343,		-- Morse, Ambulatory aid
+			227344,		-- Morse, IV/Saline lock
+			227345,		-- Morse, Gait/Transferring
+			227346,		-- Morse, Mental status
+			227348,		-- Morse score, is Low risk (25-50) interventions
+			227349		-- Morse score, is High risk (>51) interventions		
+		)
+		
+	) union (
 		-- Conscuous level score (AVPU).  Must parse separtely because it's values are text, not numeric.
-		select c.subject_id, 
-			c.hadm_id, 
-			c.itemid, 
-			a.admittime, 
-			c.charttime, 
-			1 as "var_type",
+		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, 2 as var_type,
 			(case 
-				when c.value = 'Unresponsive' then 3
-				when c.value = 'Arouse to Pain' then 2
+				when c.value = 'Unresponsive'    then 3
+				when c.value = 'Arouse to Pain'  then 2
 				when c.value = 'Arouse to Voice' then 1
-				when c.value = 'Alert' then 0
+				when c.value = 'Alert'           then 0
 				-- the next 3 are best guesses because they're not part of the standard AVPU scoring
-				when c.value = 'Lethargic' then 1
-				when c.value = 'Awake/Unresponsive' then 2
+				when c.value = 'Lethargic'             then 1
+				when c.value = 'Awake/Unresponsive'    then 2
 				when c.value = 'Arouse to Stimulation' then 2
-				end) as val_num, 
-			0 as val_min, 
-			3 as val_max, 
-			0 as ref_min, 
-			0 as ref_max, 
-			0 as val_default, 
-			a.hospital_expire_flag
+			end) as val_num, 0 as val_min, 3 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_icu.chartevents c
 		on a.subject_id = c.subject_id 
-		where c.hadm_id is not null
+		where c.itemid = 226104		-- Conscious level (AVPU).  227428=SOFA score, 226755=Glasgow Apache 2 score, 226994=Apache IV mortality prediction, 227013=GcsScore_ApacheIV Score	
+		and c.hadm_id is not null
 		and c.value is not null
-		and c.itemid = 226104		-- Conscious level (AVPU).  227428=SOFA score, 226755=Glasgow Apache 2 score, 226994=Apache IV mortality prediction, 227013=GcsScore_ApacheIV Score	
 		and c.hadm_id in (
 			select *
 			from visit_ids
-		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
+		)
+		and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
 	)
 	
 ), labs as (
@@ -568,64 +722,68 @@ with val_defaults as (
 	/****************************************************
 	 * Labs - recorded events for blood tests, urine, cultures, ...
 	 *****************************************************/
-	(
-		-- special case: 51484=ketones (urine).  Many of the records have NULL valuenum and reference ranges.  Must explicitly cast values to comply with everything else.
-		select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, 2 as "var_type", (case when l.valuenum is null then 0 else l.valuenum end) as val_num, 0 as val_min, 160 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_hosp.labevents l
-		on a.subject_id = l.subject_id 
-		where l.hadm_id is not null
-		and l.itemid in (
-			-- lab clinical variables of interest
-			51484			-- Ketones (Urine).
-			
-		) and l.hadm_id in (
-			select *
-			from visit_ids
-		) and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
-		
-	) union (
+	with lab_values as (
 	
-		select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, 2 as "var_type", (case when l.valuenum is null then 0 else l.valuenum end ) as val_num, 0 as val_min, 999 as val_max, l.ref_range_lower as ref_min, l.ref_range_upper as ref_max, ((l.ref_range_lower+l.ref_range_upper)/2.0) as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_hosp.labevents l
-		on a.subject_id = l.subject_id 
-		where l.hadm_id is not null
-		and l.itemid in (
-		
-			-- lab clinical variables of interest
-			50862,					-- Albumin
-			50863,					-- Alkaline Phosphatase
-			50868,					-- Anion Gap
-			50878,					-- AST (SGOT) (aka Asparate Aminotransferase)
-			50882,					-- Bicarbonate.  50803=Calculated Bicarbonate, Whole Blood, 50804=Calculated Total CO2, 
-			51006, 52647,			-- Blood Urea Nitrogen (BUN)
-			50893,					-- Calcium, Total
-			50902,					-- Chloride
-			50931, 50809,			-- Glucose, 50809=Glucose (blood gas)
-			51222, 50811,			-- Hemoglobin.  51222=Hemoglobin (hematology). 50811=Hemoglobin	(Blood Gas)
-			51237, 51675,			-- International Normalized Ration (INR), 51237=INR (chemistry, 51675=INR (hematology)
-			51984,					-- Ketones (Urine).
-			50813,					-- Lactate.  
-			50956,					-- Lipase
-			51250,					-- Mean Corpuscular Volume (MCV). 51691=MCV (chemistry) <-- none found, 51250=MCV (hematology)
-			50818,					-- partial pressure Carbone Dioxide (PaCO2)
-			50821,					-- partial pressure Oxygen (PaO2)
-			51275,					-- partial Thromboplastin Time (PTT)
-			50820,					-- pH. 51491=pH (hematology), 50820=pH (blood)
-			50970,					-- Phosphate.  51095=Phosphate (Urine)
-			51265,					-- Platelet Count. 51704=Platelet Count (chemistry). 51265=Platelet Count (Hematology)
-			50971, 					-- Potassium.
-			51277, 					-- Red Cell Distribution Width (RDW)
-			50983,					-- Sodium
-			50885,					-- Bilirubin, Total
-			50976,					-- Protein, Total.  51492=Protein, Urine (Hematology)
-			51002, 51003, 			-- Troponin. 51002=Troponin I (none found).  51003=Troponin T (hematology), 52642=Troponin I. 
-			51300, 51301			-- White Blood Cells (WBC).  51301=White blood Cells (hematology).  51300=WBC Count (blood)
+		(
+			-- special case: 51484=ketones (urine).  Many of the records have NULL valuenum and reference ranges.  Must explicitly cast values to comply with everything else.
+			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, 0 as ref_min, 0 as ref_max, a.hospital_expire_flag
+			from mimic_core.admissions a join mimic_hosp.labevents l
+			on a.subject_id = l.subject_id 
+			where l.hadm_id is not null
+			and l.itemid = 51484		-- Ketones (Urine).
+			and l.hadm_id in (
+				select *
+				from visit_ids
+			) 
+			and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
 			
-		) and l.hadm_id in (
-			select *
-			from visit_ids
-		) and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
+		) union (
+		
+			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, l.ref_range_lower as ref_min, l.ref_range_upper as ref_max, a.hospital_expire_flag
+			from mimic_core.admissions a join mimic_hosp.labevents l
+			on a.subject_id = l.subject_id 
+			where l.hadm_id is not null
+			and l.itemid in (
+			
+				-- lab clinical variables of interest
+				50862,					-- Albumin
+				50863,					-- Alkaline Phosphatase
+				50868,					-- Anion Gap
+				50878,					-- AST (SGOT) (aka Asparate Aminotransferase)
+				50882,					-- Bicarbonate.  50803=Calculated Bicarbonate, Whole Blood, 50804=Calculated Total CO2, 
+				51006, 52647,			-- Blood Urea Nitrogen (BUN)
+				50893,					-- Calcium, Total
+				50902,					-- Chloride
+				50931, 50809,			-- Glucose, 50809=Glucose (blood gas)
+				51222, 50811,			-- Hemoglobin.  51222=Hemoglobin (hematology). 50811=Hemoglobin	(Blood Gas)
+				51237, 51675,			-- International Normalized Ration (INR), 51237=INR (chemistry, 51675=INR (hematology)
+				51984,					-- Ketones (Urine).
+				50813,					-- Lactate.  
+				50956,					-- Lipase
+				51250,					-- Mean Corpuscular Volume (MCV). 51691=MCV (chemistry) <-- none found, 51250=MCV (hematology)
+				50818,					-- partial pressure Carbone Dioxide (PaCO2)
+				50821,					-- partial pressure Oxygen (PaO2)
+				51275,					-- partial Thromboplastin Time (PTT)
+				50820,					-- pH. 51491=pH (hematology), 50820=pH (blood)
+				50970,					-- Phosphate.  51095=Phosphate (Urine)
+				51265,					-- Platelet Count. 51704=Platelet Count (chemistry). 51265=Platelet Count (Hematology)
+				50971, 					-- Potassium.
+				51277, 					-- Red Cell Distribution Width (RDW)
+				50983,					-- Sodium
+				50885,					-- Bilirubin, Total
+				50976,					-- Protein, Total.  51492=Protein, Urine (Hematology)
+				51002, 51003, 			-- Troponin. 51002=Troponin I (none found).  51003=Troponin T (hematology), 52642=Troponin I. 
+				51300, 51301			-- White Blood Cells (WBC).  51301=White blood Cells (hematology).  51300=WBC Count (blood)
+				
+			) and l.hadm_id in (
+				select *
+				from visit_ids
+			) and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
+		)
 	)
+	select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, v.valuenum as val_num, d.val_min, d.val_max, v.ref_min, v.ref_max, d.val_default, v.hospital_expire_flag
+	from lab_values v join val_defaults d 
+	on v.itemid = d.itemid
 	
 ), medications as (
 
@@ -635,6 +793,7 @@ with val_defaults as (
 	with med_codes as (
 		--
 		-- Lookup table mapping drug product_code to desired itemid
+		-- NOTE: a produce_code may map to multiple variations of the medication (generic vs brand, quantity, pill vs. injection, ...)
 		--
 		(         select 0 itemid, 'Unknown'         med_code
 		-- Nebulizer treatments 
@@ -687,7 +846,7 @@ with val_defaults as (
 		) union ( select 10005 itemid, 'LACT250R'     med_code
 		) union ( select 10005 itemid, 'LACT30L'      med_code
 		
-		-- IV AV Nodal Blockers
+		-- IV AV Node Blockers
 		) union ( select 10006 itemid, 'LABE600/200'  med_code
 		) union ( select 10006 itemid, 'LABE100I'     med_code
 		) union ( select 10006 itemid, 'DILT500I'     med_code
@@ -698,7 +857,7 @@ with val_defaults as (
 		) union ( select 10006 itemid, 'LOMO5L'       med_code
 		) union ( select 10006 itemid, 'ADEN6I'       med_code
 	
-		-- PO AV Nodal Blockers
+		-- PO AV Node Blockers
 		) union ( select 10007 itemid, 'TIAZ120'    med_code
 		) union ( select 10007 itemid, 'TIAZ180'    med_code
 		) union ( select 10007 itemid, 'TIAZ240'    med_code
@@ -729,7 +888,6 @@ with val_defaults as (
 		) union ( select 10007 itemid, 'PROP60'     med_code
 		) union ( select 10007 itemid, 'PROPLA80'   med_code
 		) union ( select 10007 itemid, 'PROP4L'     med_code
-		
 		) union ( select 10007 itemid, 'NPROP4L'    med_code
 		) union ( select 10007 itemid, 'DIGO125'    med_code
 		) union ( select 10007 itemid, 'DIGO25'     med_code
@@ -832,8 +990,7 @@ with val_defaults as (
 		) union ( select 10011 itemid, 'HEPA5I'          med_code
 	
 		-- IV Steroids (anti-inflammatory)
-		) union ( select 10012 itemid, 'DEXA12/50D5W'    med_code
-	
+		) union ( select 10012 itemid, 'DEXA12/50D5W'   med_code
 		) union ( select 10012 itemid, 'BUDE0.5'        med_code
 		) union ( select 10012 itemid, 'BUDE0.25'       med_code
 		) union ( select 10012 itemid, 'DEXA12/50D5W'   med_code
@@ -874,7 +1031,7 @@ with val_defaults as (
 		) union ( select 10015 itemid, 'GILT40'      med_code
 		) union ( select 10015 itemid, 'MIDOS25'     med_code
 	
-	--	-- IV AntiPsychotics
+		-- IV AntiPsychotics
 		) union ( select 10016 itemid, 'HALO2OS'     med_code
 		) union ( select 10016 itemid, 'THOR25I'     med_code
 		) union ( select 10016 itemid, 'FLUP5L'      med_code
@@ -1207,7 +1364,7 @@ with val_defaults as (
 		select *
 		from med_codes d join mimic_hosp.emar_detail ed
 		on d.med_code = ed.product_code
-		where d.med_code = ed.product_code
+--		where d.med_code = ed.product_code
 	
 	), emar_events as (
 	
@@ -1232,16 +1389,15 @@ with val_defaults as (
 		select ev.subject_id, ev.hadm_id, ev.itemid, ev.charttime, ea.active
 		from emar_events ev join emar_actions ea 
 		on ev.event_txt = ea.med_action
-		where ev.event_txt = ea.med_action 
+--		where ev.event_txt = ea.med_action 
 	
 	)
 	-- merge emar_results with mimic_core.admissions to form final result
 	select er.subject_id, er.hadm_id, er.itemid, a.admittime, er.charttime, 0 var_type, er.active as val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, a.hospital_expire_flag
 	from emar_results er join mimic_core.admissions a 
 	on er.hadm_id = a.hadm_id 
-	where extract( epoch from age( er.charttime, a.admittime )) < 172800
+	where extract( epoch from age( er.charttime, a.admittime )) <= 172800
 	--order by er.subject_id asc, er.charttime asc, er.itemid asc ;
-	
 
 ), input_events as (
 
@@ -1250,32 +1406,37 @@ with val_defaults as (
 	 * 
 	 * NOTE: amount may be <= 0 (but rare)
 	 *****************************************************/
-	-- consider adding: rate, rate uom fields
-	select i.subject_id, i.hadm_id, i.itemid, a.admittime, i.starttime as charttime, 0 as "var_type", (case when i.amount is null or i.amount <= 0 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
-	from mimic_core.admissions a join mimic_icu.inputevents i 
-	on a.subject_id = i.subject_id
-	where i.hadm_id is not null
---	and i.amount is not null and i.amount > 0
-	and i.itemid in (
-	
-		-- interventions (convert to binary)
-							-- Dialysis
-		225828, 225158,		-- IV bolus.  225158=0.9% NaCl (aka Normal Saline),  225828=Lactated Ringers
-		220864, 			-- Albumin 5%
-		220862,				-- Albumin 25%
-		226367, 227072,		-- Fresh Frozen Plasma (FFP). returns small number of records.  Must convert to binary variable where non-zero = 1	
+	with i_items as (
+		-- consider adding: rate, rate uom fields
+		select i.subject_id, i.hadm_id, i.itemid, a.admittime, i.starttime as charttime, (case when i.amount is null or i.amount <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_icu.inputevents i 
+		on a.subject_id = i.subject_id
+		where i.hadm_id is not null
+	--	and i.amount is not null and i.amount > 0
+		and i.itemid in (
 		
-		-- transfusions (convert to binary)
-		225168,				-- Red Blood Cell (RBC) transfusion.  225168=Packed Red Blood Cells, 227807=catheter changed (0|1)
-		220970,				-- Fresh Frozen Plasma Transfusion (FFP)
-		225170,				-- Platelet transfusion.
-		225171				-- CryoPrecipitate.
-	) 
-	and i.hadm_id in (
-		select *
-		from visit_ids 
+			-- interventions (convert to binary)
+	
+			225828, 225158,		-- IV bolus.  225158=0.9% NaCl (aka Normal Saline),  225828=Lactated Ringers
+			220864, 			-- Albumin 5%
+			220862,				-- Albumin 25%
+			226367, 227072,		-- Fresh Frozen Plasma (FFP). returns small number of records.  Must convert to binary variable where non-zero = 1	
+			
+			-- transfusions (convert to binary)
+			225168,				-- Red Blood Cell (RBC) transfusion.  225168=Packed Red Blood Cells, 227807=catheter changed (0|1)
+			220970,				-- Fresh Frozen Plasma Transfusion (FFP)
+			225170,				-- Platelet transfusion.
+			225171				-- CryoPrecipitate.
+		) 
+		and i.hadm_id in (
+			select *
+			from visit_ids 
+		)
+		and extract( epoch from age( i.starttime, a.admittime )) between 0 and 172800
 	)
-	and extract( epoch from age( i.starttime, a.admittime )) between 0 and 172800
+	select ii.subject_id, ii.hadm_id, ii.itemid, ii.admittime, ii.charttime, v.var_type, ii.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, ii.hospital_expire_flag
+	from i_items ii join val_defaults v
+	on ii.itemid = v.itemid
 
 ), output_events as (
 
@@ -1284,37 +1445,43 @@ with val_defaults as (
 	 * 
 	 * NOTE: numeric values may be <= 0 (but rare).
 	 **********************/
-	select o.subject_id, o.hadm_id, o.itemid, a.admittime, o.charttime, 0 as "var_type", (case when o.value is null or o.value <= 0 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
-	from mimic_core.admissions a join mimic_icu.outputevents o 
-	on a.subject_id = o.subject_id 
-	where o.hadm_id is not null
-	and o.itemid in (
-
-		-- Urine output (convert to binary)
---		226566,		-- Urine and GU Irrigant out.  [No records found in mimic_iv]
-		226627,		-- OR Urine
-		226631,		-- PACU Urine
-		227489,		-- U Irrigant/Urine Volume Out
-		
-		226559 		-- Foley catheter (output)	
-
-		-- Mimic III Urine output (convert to binary)
---		226560, -- "Void"
---		227510, -- "TF Residual"
---		226561, -- "Condom Cath"
---		226584, -- "Ileoconduit"
---		226563, -- "Suprapubic"
---		226564, -- "R Nephrostomy"
---		226565, -- "L Nephrostomy"
---		226567, --	Straight Cath
---		226557, -- "R Ureteral Stent"
---		226558  -- "L Ureteral Stent"
-		
-	) and o.hadm_id in (
-		-- ids of patients admitted to hospital and stayed for at least 48 hours.
-		select *
-		from visit_ids
-	) and extract( epoch from age( o.charttime, a.admittime )) between 0 and 172800
+	with o_items as (
+	
+		select o.subject_id, o.hadm_id, o.itemid, a.admittime, o.charttime, (case when o.value is null or o.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_icu.outputevents o 
+		on a.subject_id = o.subject_id 
+		where o.hadm_id is not null
+		and o.itemid in (
+	
+			-- Urine output (convert to binary)
+	--		226566,		-- Urine and GU Irrigant out.  [No records found in mimic_iv]
+			226627,		-- OR Urine
+			226631,		-- PACU Urine
+			227489,		-- U Irrigant/Urine Volume Out
+			
+			226559 		-- Foley catheter (output)	
+	
+			-- Mimic III Urine output (convert to binary)
+	--		226560, -- "Void"
+	--		227510, -- "TF Residual"
+	--		226561, -- "Condom Cath"
+	--		226584, -- "Ileoconduit"
+	--		226563, -- "Suprapubic"
+	--		226564, -- "R Nephrostomy"
+	--		226565, -- "L Nephrostomy"
+	--		226567, --	Straight Cath
+	--		226557, -- "R Ureteral Stent"
+	--		226558  -- "L Ureteral Stent"
+			
+		) and o.hadm_id in (
+			-- ids of patients admitted to hospital and stayed for at least 48 hours.
+			select *
+			from visit_ids
+		) and extract( epoch from age( o.charttime, a.admittime )) between 0 and 172800
+	)
+	select oo.subject_id, oo.hadm_id, oo.itemid, oo.admittime, oo.charttime, v.var_type, oo.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, oo.hospital_expire_flag
+	from o_items oo join val_defaults v
+	on oo.itemid = v.itemid
 
 ), procedure_events as (
 
@@ -1323,33 +1490,186 @@ with val_defaults as (
 	 * 
 	 * NOTE: numeric values observed are >= 0.
 	 **********************/
-	select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.starttime as charttime, 0 as "var_type", (case when p.value is null or p.value <= 0 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
-	from mimic_core.admissions a join mimic_icu.procedureevents p
-	on a.subject_id = p.subject_id 
-	where p.hadm_id is not null
-	and p.itemid in (
+	with p_items as (
+	
+		select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.starttime as charttime, (case when p.value is null or p.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_icu.procedureevents p
+		on a.subject_id = p.subject_id 
+		where p.hadm_id is not null
+		and p.itemid in (
 		
-		-- interventions (convert to binary)
-		225792,	225794,		-- using Ventilation (units/time)
-		
-		-- Foley Catheter (convert to binary)
-		229351,				-- Foley Catheter (units/time)	
-		
-		-- diagnostics (binary). almost always value=1
-		225402,				-- EKG (ElectroCardiogram).
-		225432,				-- TTE (Transthoracic EchoCardiogram)
-		225459, 229581,		-- Chest X-ray.  225459=Chest X-ray.  229581=Portable Chest X-ray. 221216=X-Ray
-		225457, 			-- Abdominal X-ray
-		221214, 229582,		-- CT Scan (head, neck, chest, and abdomen).  221214=CT Scan, 229582=Portable CT Scan
-		221217,				-- UltraSound.
-		225401				-- Blood Culture order 
-		
-	) and p.hadm_id in (
-		-- ids of patients admitted to hospital and stayed for at least 48 hours.
-		select *
-		from visit_ids
-	) and extract( epoch from age( p.starttime, a.admittime )) between 0 and 172800
+			-- interventions (convert to binary)
+			25955, 225809, 225805, 225803, 225802, 225441,	-- Dialysis		
+			225792,	225794,									-- using Ventilation (units/time)
+			
+			-- Foley Catheter (convert to binary)
+			229351,				-- Foley Catheter (units/time)	
+			
+			-- diagnostics (binary). almost always value=1
+			225402,				-- EKG (ElectroCardiogram).
+			225432,				-- TTE (Transthoracic EchoCardiogram)
+			225459, 229581,		-- Chest X-ray.  225459=Chest X-ray.  229581=Portable Chest X-ray. 221216=X-Ray
+			225457, 			-- Abdominal X-ray
+			221214, 229582,		-- CT Scan (head, neck, chest, and abdomen).  221214=CT Scan, 229582=Portable CT Scan
+			221217,				-- UltraSound.
+			225401				-- Blood Culture order 
+			
+		) and p.hadm_id in (
+			-- ids of patients admitted to hospital and stayed for at least 48 hours.
+			select *
+			from visit_ids
+		) and extract( epoch from age( p.starttime, a.admittime )) between 0 and 172800
+	)
+	select pp.subject_id, pp.hadm_id, pp.itemid, pp.admittime, pp.charttime, v.var_type, pp.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, pp.hospital_expire_flag
+	from p_items pp join val_defaults v
+	on pp.itemid = v.itemid
 
+), examinations as (
+
+	-- map ICD code to itemID
+	with icd_itemid as (
+	
+		-- Cardiac Paced (pacemaker)
+		(         select 10026 itemid, '99601'  icd_code
+		) union ( select 10026 itemid, 'V4501'  icd_code
+		) union ( select 10026 itemid, 'V5331'  icd_code
+		) union ( select 10026 itemid, 'Z4501'  icd_code
+		) union ( select 10026 itemid, 'Z45010' icd_code
+		) union ( select 10026 itemid, 'Z45018' icd_code
+		) union ( select 10026 itemid, 'Z950'   icd_code
+		
+		-- atrial fibrillation
+		) union ( select 10027 itemid, 'I480'  icd_code
+		) union ( select 10027 itemid, 'I481'  icd_code
+		) union ( select 10027 itemid, 'I4811' icd_code
+		) union ( select 10027 itemid, 'I4819' icd_code
+		) union ( select 10027 itemid, 'I482'  icd_code
+		) union ( select 10027 itemid, 'I4820' icd_code	
+		) union ( select 10027 itemid, 'I4821' icd_code
+		) union ( select 10027 itemid, 'I489'  icd_code
+		) union ( select 10027 itemid, 'I4891' icd_code
+		
+		-- Atrial Flutter
+		) union ( select 10028 itemid, '42732' icd_code
+		) union ( select 10028 itemid, 'I48'   icd_code
+		) union ( select 10028 itemid, 'I483'  icd_code
+		) union ( select 10028 itemid, 'I484'  icd_code
+		) union ( select 10028 itemid, 'I489'  icd_code
+		) union ( select 10028 itemid, 'I4892' icd_code
+	
+		-- Using? (not sure what this is)
+		) union ( select 10029 itemid, '' icd_code
+		
+		-- SupraVentricular TachyCardia (SVT)
+		) union ( select 10030 itemid, '4270' icd_code
+		) union ( select 10030 itemid, 'I471' icd_code
+		
+		-- Ventricular TachyCardia (VT)
+		) union ( select 10031 itemid, '4271' icd_code
+		) union ( select 10031 itemid, 'I472' icd_code
+		
+		-- Ventricular Failure(?)  (VF)
+		) union ( select 10032 itemid, '42741' icd_code
+		) union ( select 10032 itemid, 'I490'  icd_code
+		) union ( select 10032 itemid, 'I4901' icd_code
+		
+		-- Asystole (flatline - dead)
+		) union ( select 10033 itemid, '4275'  icd_code		-- cardiac arrest
+		) union ( select 10033 itemid, '77985' icd_code		-- cardiac arrest of newborn
+		
+		-- Heart Block
+		) union ( select 10034 itemid, '4261'  icd_code
+		) union ( select 10034 itemid, '42610' icd_code
+		) union ( select 10034 itemid, '42611' icd_code
+		) union ( select 10034 itemid, '42612' icd_code
+		) union ( select 10034 itemid, '42613' icd_code
+		) union ( select 10034 itemid, '4263'  icd_code
+		) union ( select 10034 itemid, '4264'  icd_code
+		) union ( select 10034 itemid, '42650' icd_code
+		) union ( select 10034 itemid, '42651' icd_code
+		) union ( select 10034 itemid, '42652' icd_code
+		) union ( select 10034 itemid, '42653' icd_code
+		) union ( select 10034 itemid, '42654' icd_code
+		) union ( select 10034 itemid, '4266'  icd_code
+		) union ( select 10034 itemid, '74686' icd_code
+		) union ( select 10034 itemid, 'I44'   icd_code
+		) union ( select 10034 itemid, 'I440'  icd_code
+		) union ( select 10034 itemid, 'I441'  icd_code
+		) union ( select 10034 itemid, 'I442'  icd_code
+		) union ( select 10034 itemid, 'I443'  icd_code
+		) union ( select 10034 itemid, 'I4430' icd_code
+		) union ( select 10034 itemid, 'I4439' icd_code
+		) union ( select 10034 itemid, 'I444'  icd_code
+		) union ( select 10034 itemid, 'I445'  icd_code
+		) union ( select 10034 itemid, 'I446'  icd_code
+		) union ( select 10034 itemid, 'I4460' icd_code
+		) union ( select 10034 itemid, 'I4469' icd_code
+		) union ( select 10034 itemid, 'I447'  icd_code
+		) union ( select 10034 itemid, 'I450'  icd_code
+		) union ( select 10034 itemid, 'I451'  icd_code
+		) union ( select 10034 itemid, 'I4510' icd_code
+		) union ( select 10034 itemid, 'I4519' icd_code
+		) union ( select 10034 itemid, 'I452'  icd_code
+		) union ( select 10034 itemid, 'I453'  icd_code
+		) union ( select 10034 itemid, 'I454'  icd_code
+		) union ( select 10034 itemid, 'I455'  icd_code
+		) union ( select 10034 itemid, 'Q246'  icd_code
+		
+		-- Junctional Rhythm
+		) union ( select 10035 itemid, '' icd_code
+		)
+		
+	), hosp_events as (
+	
+		-- search hospital for cardiac examinations
+
+		select di.subject_id, di.hadm_id, ii.itemid
+		from mimic_hosp.diagnoses_icd di join icd_itemid ii
+		on di.icd_code = ii.icd_code
+		where di.hadm_id is not null 
+		and di.icd_code in ( 
+			select i.icd_code
+			from icd_itemid i
+		)
+		
+	), ed_events as (
+	
+		-- search ED for cardiac examinations
+	
+		with tmp as (
+			select d.subject_id, d.stay_id, ii.itemid
+			from mimic_ed.diagnosis d join icd_itemid ii
+			on d.icd_code = ii.icd_code
+			where d.stay_id is not null 
+			and d.icd_code in ( 
+				select i.icd_code
+				from icd_itemid i
+			)
+		)
+		select t.subject_id, e.hadm_id, t.itemid
+		from mimic_ed.edstays e join tmp t 
+		on e.stay_id = t.stay_id
+		
+	), results as (
+		-- merge hosp and ED records
+		-- NOTE: ICD billing codes do not have timestamps associated with the records.
+		--       Therefore we have no idea WHEN the diagnosis was made other than the visit/stay which it occurred.
+		--		 We'll have to assume the diagnosis applies to the entire visit
+		(
+			select c.subject_id, c.hadm_id, c.itemid, a.hospital_expire_flag 
+			from hosp_events c join mimic_core.admissions a
+			on c.hadm_id = a.hadm_id 
+		) union ( 
+			select c.subject_id, c.hadm_id, c.itemid, a.hospital_expire_flag 
+			from ed_events c join mimic_core.admissions a
+			on c.hadm_id = a.hadm_id 
+		)
+	)
+	select r.subject_id, r.hadm_id, r.itemid, cast( '1000-01-01 00:00:00.000' as timestamp ) as admittime, cast( '1000-01-01 00:00:00.000' as timestamp ) as charttime, v.var_type, 1 as val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag 
+	from results r join val_defaults v
+	on r.itemid = v.itemid
+
+	
 ), results as (
 	/*********************************
 	 * MERGE subquery results
@@ -1375,6 +1695,9 @@ with val_defaults as (
 	) union (
 		select *
 		from procedure_events
+	) union ( 
+		select *
+		from examinations
 	) union (
 		-- merge chartevents last because it's the largest set
 		select *
