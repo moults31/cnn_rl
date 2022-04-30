@@ -118,7 +118,8 @@ with total_visits as (
 	-- grand total of patient visits >= 48 hours
 	select distinct r.hadm_id
 	from results r
-*/	
+*/
+	-- get all visits in ICU >= 48 hours
 	select distinct a.hadm_id 
 	from mimic_core.admissions a 
 	where extract( epoch from age( a.dischtime, a.admittime )) >= 172800
@@ -173,7 +174,7 @@ with total_visits as (
 	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
 	) union ( select 0 pid, 4 rid, 4 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- prior admission to hospital within previous 90 days.
 	) union ( select 0 pid, 5 rid, 5 itemid, 3 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- hour of day
-	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 41 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- patient location -- health severity/priority
+	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 41 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- patient location (was health severity/priority)
 	-- vital signs (mimic_icu.chartevents)	
 	) union ( select 0 pid, 7  rid, 223762 itemid, 2 var_type, 37.0  val_num, 27 val_min, 42  val_max, 36.1 ref_min,37.2 ref_max, 37   val_default		-- temperature C
 	) union ( select 0 pid, 7  rid, 223761 itemid, 2 var_type, 98.6  val_num, 90 val_min, 110 val_max, 97   ref_min, 99  ref_max, 98.6 val_default		-- temperature F
@@ -402,166 +403,181 @@ with total_visits as (
 	) union ( select 1 active, 'TPN Rate Not Changed'                      med_action
 	)
 	
+), hosp_location as (
+
+	(         select 0  ward_id, 'Unknown'                                          ward_name
+	) union ( select 1  ward_id, 'Cardiac Surgery'                                  ward_name
+	) union ( select 2  ward_id, 'Cardiac Vascular Intensive Care Unit (CVICU)'     ward_name
+	) union ( select 3  ward_id, 'Cardiology'                                       ward_name
+	) union ( select 4  ward_id, 'Cardiology Surgery Intermediate'                  ward_name
+	) union ( select 5  ward_id, 'Coronary Care Unit (CCU)'                         ward_name
+	) union ( select 6  ward_id, 'Emergency Department'                             ward_name
+	) union ( select 7  ward_id, 'Emergency Department Observation'                 ward_name
+	) union ( select 8  ward_id, 'Hematology/Oncology'                              ward_name
+	) union ( select 9  ward_id, 'Hematology/Oncology Intermediate'                 ward_name
+	) union ( select 10 ward_id, 'Labor & Delivery'                                 ward_name
+	) union ( select 11 ward_id, 'Medical Intensive Care Unit (MICU)'               ward_name
+	) union ( select 12 ward_id, 'Medical/Surgical (Gynecology)'                    ward_name
+	) union ( select 13 ward_id, 'Medical/Surgical Intensive Care Unit (MICU/SICU)' ward_name
+	) union ( select 14 ward_id, 'Medicine'                                         ward_name
+	) union ( select 15 ward_id, 'Medicine/Cardiology'                              ward_name
+	) union ( select 16 ward_id, 'Medicine/Cardiology Intermediate'                 ward_name
+	) union ( select 17 ward_id, 'Med/Surg'                                         ward_name
+	) union ( select 18 ward_id, 'Med/Surg/GYN'                                     ward_name
+	) union ( select 19 ward_id, 'Med/Surg/Trauma'                                  ward_name
+	) union ( select 20 ward_id, 'Neonatal Intensive Care Unit (NICU)'              ward_name
+	) union ( select 21 ward_id, 'Neuro Intermediate'                               ward_name
+	) union ( select 22 ward_id, 'Neurology'                                        ward_name
+	) union ( select 23 ward_id, 'Neuro Stepdown'                                   ward_name
+	) union ( select 24 ward_id, 'Neuro Surgical Intensive Care Unit (Neuro SICU)'  ward_name
+	) union ( select 25 ward_id, 'Nursery - Well Babies'                            ward_name
+	) union ( select 26 ward_id, 'Observation'                                      ward_name
+	) union ( select 27 ward_id, 'Obstetrics Antepartum'                            ward_name
+	) union ( select 28 ward_id, 'Obstetrics Postpartum'                            ward_name
+	) union ( select 29 ward_id, 'Obstetrics (Postpartum & Antepartum)'             ward_name
+	) union ( select 30 ward_id, 'PACU'                                             ward_name
+	) union ( select 31 ward_id, 'Psychiatry'                                       ward_name
+	) union ( select 32 ward_id, 'Special Care Nursery (SCN)'                       ward_name
+	) union ( select 33 ward_id, 'Surgery'                                          ward_name
+	) union ( select 34 ward_id, 'Surgery/Pancreatic/Biliary/Bariatric'             ward_name
+	) union ( select 35 ward_id, 'Surgery/Trauma'                                   ward_name
+	) union ( select 36 ward_id, 'Surgery/Vascular/Intermediate'                    ward_name
+	) union ( select 37 ward_id, 'Surgical Intensive Care Unit (SICU)'              ward_name
+	) union ( select 38 ward_id, 'Thoracic Surgery'                                 ward_name
+	) union ( select 39 ward_id, 'Transplant'                                       ward_name
+	) union ( select 40 ward_id, 'Trauma SICU (TSICU)'                              ward_name
+	) union ( select 41 ward_id, 'Vascular'                                         ward_name
+	)
+	
+), patient_gender as (
+
+	(         select 'M' gender_name, 0 gender_id
+	) union ( select 'F' gender_name, 1 gender_id
+	)
+	
+), patient_ethnicity as ( 
+
+	(         select 'AMERICAN INDIAN/ALASKA NATIVE' ethnicity_name, 0 ethnicity_id	
+	) union ( select 'ASIAN'                         ethnicity_name, 0 ethnicity_id 	
+	) union ( select 'BLACK/AFRICAN AMERICAN'        ethnicity_name, 1 ethnicity_id 
+ 	) union ( select 'HISPANIC/LATINO'               ethnicity_name, 0 ethnicity_id 
+ 	) union ( select 'OTHER'                         ethnicity_name, 0 ethnicity_id 	
+	) union ( select 'UNABLE TO OBTAIN'              ethnicity_name, 0 ethnicity_id  
+	) union ( select 'UNKNOWN'                       ethnicity_name, 0 ethnicity_id 	
+	) union ( select 'WHITE'                         ethnicity_name, 0 ethnicity_id
+	)
+
 ), patient_chars as (
 
 	/**************************************
 	 * Patient characteristics - age, sex, race, ...
 	 **********************************************/
-	(
-		-- age (normalized to range 0...100)
-		select p.subject_id, a.hadm_id, 0 as itemid, a.admittime, a.admittime as charttime, 2 as var_type, p.anchor_age as val_num, 0 as val_min, 100 as val_max, 0 as ref_min, 91 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_core.patients p 
-		on a.subject_id = p.subject_id
-		and a.hadm_id in (
-			select *
-			from visit_ids
-		)
-		
-	) union (
-		-- sex/gender (0=male, 1=female/other)
-		select p.subject_id, a.hadm_id, 1 as itemid, a.admittime, a.admittime as charttime, 0 as var_type, (case when p.gender = 'M' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_core.patients p 
-		on a.subject_id = p.subject_id
-		and a.hadm_id in (
-			select *
-			from visit_ids
-		)
-		
-	) union (
-		-- race (0=black/african american, 1=other)
-		select p.subject_id, a.hadm_id, 2 as itemid, a.admittime, a.admittime as charttime, 0 as var_type, (case when a.ethnicity = 'BLACK/AFRICAN AMERICAN' then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 1 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_core.patients p 
-		on a.subject_id = p.subject_id
-		and a.hadm_id in (
-			select *
-			from visit_ids
-		)
-		
-	) union (
-	
-		-- prior history of cardiac arrest (experienced in ICU)
-		select a.subject_id, a.hadm_id, 3 as itemid, a.admittime, p.starttime, 0 as var_type, (case when p.value is null or p.value <> 1 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag 
-		from mimic_core.admissions a join mimic_icu.procedureevents p 
-		on a.subject_id = p.subject_id
-		and p.itemid = 225466 
-		and a.hadm_id in (
-			select *
-			from visit_ids
-		)		
-		and extract( epoch from age( a.admittime, p.starttime )) >= 0
-		
-	) union (
-		-- prior hospital admissions within past 90 days (this could certainly be optimized)
-	
-		with tmp as (
-		
-			-- get patient data from admissions table. Convert admittime to epoch time for easier math
-			select a.subject_id, a.hadm_id, a.admittime, extract( epoch from a.admittime ) as intime, extract( epoch from a.dischtime ) as outtime, a.hospital_expire_flag 
-			from mimic_core.admissions a 
-			where a.hadm_id in (
-				select *
-				from visit_ids
-			)
---			order by a.admittime asc
-			
-		), time_diff as (
-		
-			-- compute difference between first day of current admission and last day of previous admission, for same patient
-			-- time is represented as number of seconds since the epoch.  1 day = 24 hours = 1440 minutes = 86400 seconds.
-			select t.subject_id, t.hadm_id, t.admittime, t.intime,
-				lag( t.outtime )
-					over ( partition by t.subject_id order by t.outtime ) as prev_time,
-				-- NOTE: subtracting 90 here so downstream comparisons only need to check > 0.
-				floor( (t.intime - lag( t.outtime ) over ( partition by t.subject_id order by t.intime )) / 86400) - 90 as diff,
-				t.hospital_expire_flag
-			from tmp t
---			order by t.intime asc
-		)
-		-- assess results and flag all prior admissions within 90 days
-		select t.subject_id, t.hadm_id, 4 as itemid, t.admittime, t.admittime as charttime, 0 as var_type, (case when t.diff is null or t.diff > 0 then 0 else 1 end) as val_num, 0 as val_min, 1 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, t.hospital_expire_flag
-		from time_diff t
---		order by t.subject_id asc, t.admittime asc
-	
-	) union (
-	
-		-- hour of day.  compute hour of day in military time upon admission to hospital.  
-		-- This must be incremented hourly for first 48 hours of the visit.
-		select p.subject_id, a.hadm_id, 5 as itemid, a.admittime, a.admittime as charttime, 2 as var_type, (extract( hour from a.admittime)) as val_num, 0 as val_min, 23 as val_max, 0 as ref_min, 23 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_core.patients p 
-		on a.subject_id = p.subject_id 
-		where a.hadm_id is not null
-		and p.subject_id in (
-			select *
-			from patient_ids
-		)
-		
-	) union (
-		-- patient location
-		with hosp_location as (
-			(         select 0  ward_id, 'Unknown'                                          ward_name
-			) union ( select 1  ward_id, 'Cardiac Surgery'                                  ward_name
-			) union ( select 2  ward_id, 'Cardiac Vascular Intensive Care Unit (CVICU)'     ward_name
-			) union ( select 3  ward_id, 'Cardiology'                                       ward_name
-			) union ( select 4  ward_id, 'Cardiology Surgery Intermediate'                  ward_name
-			) union ( select 5  ward_id, 'Coronary Care Unit (CCU)'                         ward_name
-			) union ( select 6  ward_id, 'Emergency Department'                             ward_name
-			) union ( select 7  ward_id, 'Emergency Department Observation'                 ward_name
-			) union ( select 8  ward_id, 'Hematology/Oncology'                              ward_name
-			) union ( select 9  ward_id, 'Hematology/Oncology Intermediate'                 ward_name
-			) union ( select 10 ward_id, 'Labor & Delivery'                                 ward_name
-			) union ( select 11 ward_id, 'Medical Intensive Care Unit (MICU)'               ward_name
-			) union ( select 12 ward_id, 'Medical/Surgical (Gynecology)'                    ward_name
-			) union ( select 13 ward_id, 'Medical/Surgical Intensive Care Unit (MICU/SICU)' ward_name
-			) union ( select 14 ward_id, 'Medicine'                                         ward_name
-			) union ( select 15 ward_id, 'Medicine/Cardiology'                              ward_name
-			) union ( select 16 ward_id, 'Medicine/Cardiology Intermediate'                 ward_name
-			) union ( select 17 ward_id, 'Med/Surg'                                         ward_name
-			) union ( select 18 ward_id, 'Med/Surg/GYN'                                     ward_name
-			) union ( select 19 ward_id, 'Med/Surg/Trauma'                                  ward_name
-			) union ( select 20 ward_id, 'Neonatal Intensive Care Unit (NICU)'              ward_name
-			) union ( select 21 ward_id, 'Neuro Intermediate'                               ward_name
-			) union ( select 22 ward_id, 'Neurology'                                        ward_name
-			) union ( select 23 ward_id, 'Neuro Stepdown'                                   ward_name
-			) union ( select 24 ward_id, 'Neuro Surgical Intensive Care Unit (Neuro SICU)'  ward_name
-			) union ( select 25 ward_id, 'Nursery - Well Babies'                            ward_name
-			) union ( select 26 ward_id, 'Observation'                                      ward_name
-			) union ( select 27 ward_id, 'Obstetrics Antepartum'                            ward_name
-			) union ( select 28 ward_id, 'Obstetrics Postpartum'                            ward_name
-			) union ( select 29 ward_id, 'Obstetrics (Postpartum & Antepartum)'             ward_name
-			) union ( select 30 ward_id, 'PACU'                                             ward_name
-			) union ( select 31 ward_id, 'Psychiatry'                                       ward_name
-			) union ( select 32 ward_id, 'Special Care Nursery (SCN)'                       ward_name
-			) union ( select 33 ward_id, 'Surgery'                                          ward_name
-			) union ( select 34 ward_id, 'Surgery/Pancreatic/Biliary/Bariatric'             ward_name
-			) union ( select 35 ward_id, 'Surgery/Trauma'                                   ward_name
-			) union ( select 36 ward_id, 'Surgery/Vascular/Intermediate'                    ward_name
-			) union ( select 37 ward_id, 'Surgical Intensive Care Unit (SICU)'              ward_name
-			) union ( select 38 ward_id, 'Thoracic Surgery'                                 ward_name
-			) union ( select 39 ward_id, 'Transplant'                                       ward_name
-			) union ( select 40 ward_id, 'Trauma SICU (TSICU)'                              ward_name
-			) union ( select 41 ward_id, 'Vascular'                                         ward_name
-			)
-		), hosp_transfers as (
-			-- joint transfers to hosp_location to convert careunit to an numeric value
-			select *
-			from mimic_core.transfers t join hosp_location h 
-			on t.careunit = h.ward_name
-			where t.hadm_id in ( 
-				select *
-				from visit_ids
-			)
-			and t.eventtype <> 'discharge'
-		)
-		select a.subject_id, a.hadm_id, 6 as itemid, a.admittime, ht.intime as charttime, 2 as var_type, ht.ward_id as val_num, 0 val_min, 41 val_max, 0 ref_min, 0 ref_max, 0 val_default, a.hospital_expire_flag 
-		from mimic_core.admissions a join hosp_transfers ht 
-		on a.hadm_id = ht.hadm_id
+	with patient_history as ( 
+		-- 
+		select a.subject_id, a.hadm_id, a.admittime, a.admittime as charttime, p.anchor_age, p.gender, a.ethnicity, (extract( hour from a.admittime)) as "hour", a.hospital_expire_flag 
+		from mimic_core.patients p join mimic_core.admissions a 
+		on p.subject_id = a.subject_id 
 		where a.hadm_id in ( 
 			select *
 			from visit_ids
 		)
-		and extract( epoch from age( ht.intime, a.admittime )) between 0 and 172800
-	)
+		
+	), p_items as (
 	
+		-- build characteristics
+		( 
+			-- age 
+			select pp.subject_id, pp.hadm_id, 0 as itemid, pp.admittime, pp.charttime, pp.anchor_age as val_num, pp.hospital_expire_flag
+			from patient_history pp
+		) union ( 
+			-- sex/gender
+			select pp.subject_id, pp.hadm_id, 1 as itemid, pp.admittime, pp.charttime, g.gender_id as val_num, pp.hospital_expire_flag
+			from patient_history pp	join patient_gender g 
+			on pp.gender = g.gender_name
+			where g.gender_id > 0
+		) union (
+			-- ethnicity
+			select pp.subject_id, pp.hadm_id, 2 as itemid, pp.admittime, pp.charttime, e.ethnicity_id as val_num, pp.hospital_expire_flag
+			from patient_history pp	join patient_ethnicity e 
+			on pp.ethnicity = e.ethnicity_name
+			where e.ethnicity_id > 0
+			
+		) union (
+			-- hour of day.  compute hour of day in military time upon admission to hospital.  
+			-- This must be incremented hourly for first 48 hours of the visit.
+			select p.subject_id, p.hadm_id, 5 as itemid, p.admittime, p.charttime, p."hour" as val_num, p.hospital_expire_flag
+			from patient_history p
+			
+		) union (
+			-- prior history of cardiac arrest (experienced in ICU)
+			select a.subject_id, a.hadm_id, 3 as itemid, a.admittime, a.admittime as charttime, 1 as val_num, a.hospital_expire_flag 
+			from mimic_core.admissions a join mimic_icu.procedureevents p 
+			on a.subject_id = p.subject_id
+			where p.value is not null
+			and p.itemid = 225466 
+			and a.subject_id in (
+				-- need to check patient's entire history, not just admissions
+				select *
+				from patient_ids
+			)		
+			and extract( epoch from age( a.admittime, p.starttime )) >= 0
+		
+		) union (
+			-- prior hospital admissions within past 90 days (this could certainly be optimized)
+		
+			with tmp as (
+			
+				-- get patient data from admissions table. Convert admittime to epoch time for easier math
+				select a.subject_id, a.hadm_id, a.admittime, extract( epoch from a.admittime ) as intime, extract( epoch from a.dischtime ) as outtime, a.hospital_expire_flag 
+				from mimic_core.admissions a 
+				where a.hadm_id in (
+					select *
+					from visit_ids
+				)
+				
+			), time_diff as (
+			
+				-- compute difference between first day of current admission and last day of previous admission, for same patient
+				-- time is represented as number of seconds since the epoch.  1 day = 24 hours = 1440 minutes = 86400 seconds.
+				select t.subject_id, t.hadm_id, t.admittime,
+--					lag( t.outtime ) over ( partition by t.subject_id order by t.outtime ) as prev_time,
+					-- NOTE: subtracting 90 here so downstream comparisons only need to check > 0.
+					floor( (t.intime - lag( t.outtime ) over ( partition by t.subject_id order by t.intime )) / 86400) - 90 as diff,
+					t.hospital_expire_flag
+				from tmp t
+			)
+			-- assess results and flag all prior admissions within 90 days
+			select t.subject_id, t.hadm_id, 4 as itemid, t.admittime, t.admittime as charttime, 1 as val_num, t.hospital_expire_flag
+			from time_diff t
+			where t.diff > 0
+		
+		) union (
+			-- patient location
+			with hosp_transfers as (
+				-- join transfers to hosp_location to convert careunit to an numeric value
+				select t.subject_id, t.hadm_id, t.intime, h.ward_id
+				from mimic_core.transfers t join hosp_location h 
+				on t.careunit = h.ward_name
+				where t.hadm_id in ( 
+					select *
+					from visit_ids
+				)
+				and t.eventtype <> 'discharge'
+			)
+			select a.subject_id, a.hadm_id, 6 as itemid, a.admittime, ht.intime as charttime, ht.ward_id as val_num, a.hospital_expire_flag 
+			from mimic_core.admissions a join hosp_transfers ht 
+			on a.hadm_id = ht.hadm_id
+			where a.hadm_id in ( 
+				select *
+				from visit_ids
+			)
+			and extract( epoch from age( ht.intime, a.admittime )) between 0 and 172800
+		)
+	)
+	-- merge with val_defaults to inherit variable definitions
+	select p.subject_id, p.hadm_id, p.itemid, p.admittime, p.charttime, v.var_type, p.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, p.hospital_expire_flag
+	from p_items p join val_defaults v 
+	on p.itemid = v.itemid
 	
 		-- patient severity/priority (how serious is the situation based on where they checked into the hospital)
 --	) union (
@@ -593,17 +609,18 @@ with total_visits as (
 	 *******************************************/
 	-- use 2-pass system to aggregate data (because it's faster)
 	-- 1st pass collects all variables of interest filtered by first 48 hours after admission
-	-- 2nd pass partitions data into subsets by variable type, then maps to val_defaults to shape results.
+	-- 2nd pass partitions data into subsets by variable type
+	-- result is merged with val_defaults to inherit variable definitions from patient 0
 	with vitals as (
 		-- select all values of interest within first 48 hours
 	
-		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.valuenum, a.hospital_expire_flag
+		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.value, c.valuenum, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_icu.chartevents c
 		on a.subject_id = c.subject_id 
 		where c.hadm_id is not null
-		and c.valuenum is not null
 		and c.itemid in (
 
+			-- interventions (convert to binary)
 			227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow, 
 			227583, 						-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
 			227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
@@ -634,88 +651,106 @@ with total_visits as (
 			227345,		-- Morse, Gait/Transferring
 			227346,		-- Morse, Mental status
 			227348,		-- Morse score, is Low risk (25-50) interventions
-			227349 		-- Morse score, is High risk (>51) interventions
+			227349, 	-- Morse score, is High risk (>51) interventions
+			
+			226104		-- Conscious level (AVPU).  227428=SOFA score, 226755=Glasgow Apache 2 score, 226994=Apache IV mortality prediction, 227013=GcsScore_ApacheIV Score				
 			
 		) and c.hadm_id in (
 			select *
 			from visit_ids
 		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
 		
-	)
-	-- shape and mold the subsets within the selection, then merge.
-	-- we do a 2-pass system because it's faster.
-	(
-		-- binary variables
-		select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, 1 as val_num, d.val_min, d.val_max, d.ref_min, d.ref_max, d.val_default, v.hospital_expire_flag
-		from vitals v join val_defaults d
-		on v.itemid = d.itemid
-		where v.valuenum is not null 
-		and v.valuenum > 0
-		and v.itemid in ( 
-			227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow, 
-			227583, 						-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
-			227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
-			226169
-		)
+	), c_results as ( 
+		-- shape and mold the subsets within the selection, then merge.
+		-- we do a 2-pass system because it's faster.
 
-	) union (
-		-- continuous variables 
-		select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, v.valuenum as val_num, d.val_min, d.val_max, d.ref_min, d.ref_max, d.val_default, v.hospital_expire_flag
-		from vitals v join val_defaults d
-		on v.itemid = d.itemid
-		where v.valuenum is not null 
-		and v.itemid in ( 
-			223835, 					-- FiO2. 223835=Fraction of Inspired O2.  
-			220045, 					-- Heart rate
-			223762,						-- Temperature C
-			223761,						-- Temperature F.
-			220210, 					-- Respiratory Rate
-			220179, 220050,   			-- Blood pressure, systolic.
-			220180, 220051,				-- Blood pressure, diastolic
-			220277, 228232,				-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
+		(
+			-- binary variables
+			-- we need to export both 'on' and 'off' states, interpreted by flow rate.
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, (case when v.valuenum > 0 then 1 else 0 end) as val_num, v.hospital_expire_flag
+			from vitals v
+			where v.valuenum is not null
+			and v.itemid in ( 
+				227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow
+				227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
+				226169							-- using Suction
+			)
 			
-			-- morse / braden scores (continuous)
-			224054,		-- Braden Sensory Perception
-			224055,		-- Braden Moisture
-			224056,		-- Braden Activity
-			224057,		-- Braden Mobility
-			224058,		-- Braden Nutrition
-			224059,		-- Braden Friction/Shear
-			
-			227341,		-- Morse, History of falling (within 3 mnths)
-			227342,		-- Morse, Secondary diagnosis
-			227343,		-- Morse, Ambulatory aid
-			227344,		-- Morse, IV/Saline lock
-			227345,		-- Morse, Gait/Transferring
-			227346,		-- Morse, Mental status
-			227348,		-- Morse score, is Low risk (25-50) interventions
-			227349		-- Morse score, is High risk (>51) interventions		
-		)
+		) union (
 		
-	) union (
-		-- Conscuous level score (AVPU).  Must parse separtely because it's values are text, not numeric.
-		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, 2 as var_type,
-			(case 
-				when c.value = 'Unresponsive'    then 3
-				when c.value = 'Arouse to Pain'  then 2
-				when c.value = 'Arouse to Voice' then 1
-				when c.value = 'Alert'           then 0
-				-- the next 3 are best guesses because they're not part of the standard AVPU scoring
-				when c.value = 'Lethargic'             then 1
-				when c.value = 'Awake/Unresponsive'    then 2
-				when c.value = 'Arouse to Stimulation' then 2
-			end) as val_num, 0 as val_min, 3 as val_max, 0 as ref_min, 0 as ref_max, 0 as val_default, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.chartevents c
-		on a.subject_id = c.subject_id 
-		where c.itemid = 226104		-- Conscious level (AVPU).  227428=SOFA score, 226755=Glasgow Apache 2 score, 226994=Apache IV mortality prediction, 227013=GcsScore_ApacheIV Score	
-		and c.hadm_id is not null
-		and c.value is not null
-		and c.hadm_id in (
-			select *
-			from visit_ids
+			-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
+			-- must parse separately because 'valuenum' is always NULL and uses value instead with text labels		
+			with cpap as (
+				(         select 'Off' setting, 0 id
+				) union ( select 'On'  setting, 1 id
+				)
+			)		
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, cp.id as val_num, v.hospital_expire_flag
+			from vitals v join cpap cp 
+			on v.value = cp.setting
+			and v.itemid = 227583
+	
+		) union (
+			-- continuous variables 
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, v.valuenum as val_num, v.hospital_expire_flag
+			from vitals v
+			where v.valuenum is not null 
+			and v.itemid in ( 
+				223835, 					-- FiO2. 223835=Fraction of Inspired O2.  
+				220045, 					-- Heart rate
+				223762,						-- Temperature C
+				223761,						-- Temperature F.
+				220210, 					-- Respiratory Rate
+				220179, 220050,   			-- Blood pressure, systolic.
+				220180, 220051,				-- Blood pressure, diastolic
+				220277, 228232,				-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
+				
+				-- morse / braden scores (continuous)
+				224054,		-- Braden Sensory Perception
+				224055,		-- Braden Moisture
+				224056,		-- Braden Activity
+				224057,		-- Braden Mobility
+				224058,		-- Braden Nutrition
+				224059,		-- Braden Friction/Shear
+				
+				227341,		-- Morse, History of falling (within 3 mnths)
+				227342,		-- Morse, Secondary diagnosis
+				227343,		-- Morse, Ambulatory aid
+				227344,		-- Morse, IV/Saline lock
+				227345,		-- Morse, Gait/Transferring
+				227346,		-- Morse, Mental status
+				227348,		-- Morse score, is Low risk (25-50) interventions
+				227349		-- Morse score, is High risk (>51) interventions		
+			)
+			
+		) union (
+			-- Conscuous level score (AVPU).  Must parse separately because it's values are text, not numeric.
+				
+			with avpu_scores as (
+			
+				-- standard scores --
+				(         select 'Alert'                 score_name, 0 score
+				) union ( select 'Arouse to Voice'       score_name, 1 score
+				) union ( select 'Arouse to Pain'        score_name, 2 score
+				) union ( select 'Unresponsive'          score_name, 3 score
+				-- non-standard scores --
+				) union ( select 'Lethargic'             score_name, 1 score
+				) union ( select 'Awake/Unresponsive'    score_name, 2 score
+				) union ( select 'Arouse to Stimulation' score_name, 2 score
+				)
+				
+			)
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, a.score as val_num, v.hospital_expire_flag
+			from vitals v join avpu_scores a
+			on v.value = a.score_name
+			where v.value is not null 
+			and v.itemid = 226104
 		)
-		and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
 	)
+	-- merge with val_defaults to inherit variable definition
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag
+	from c_results r join val_defaults v 
+	on r.itemid = v.itemid
 	
 ), labs as (
 
@@ -725,7 +760,9 @@ with total_visits as (
 	with lab_values as (
 	
 		(
-			-- special case: 51484=ketones (urine).  Many of the records have NULL valuenum and reference ranges.  Must explicitly cast values to comply with everything else.
+			-- special case: 51484=ketones (urine).  
+			-- Many of the records have NULL valuenum and reference ranges.  
+			-- Must explicitly cast to comply with everything else downstream
 			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, 0 as ref_min, 0 as ref_max, a.hospital_expire_flag
 			from mimic_core.admissions a join mimic_hosp.labevents l
 			on a.subject_id = l.subject_id 
@@ -793,7 +830,7 @@ with total_visits as (
 	with med_codes as (
 		--
 		-- Lookup table mapping drug product_code to desired itemid
-		-- NOTE: a produce_code may map to multiple variations of the medication (generic vs brand, quantity, pill vs. injection, ...)
+		-- NOTE: a product_code may map to multiple variations of the medication (generic vs brand, formulation, ...)
 		--
 		(         select 0 itemid, 'Unknown'         med_code
 		-- Nebulizer treatments 
@@ -1408,15 +1445,12 @@ with total_visits as (
 	 *****************************************************/
 	with i_items as (
 		-- consider adding: rate, rate uom fields
-		select i.subject_id, i.hadm_id, i.itemid, a.admittime, i.starttime as charttime, (case when i.amount is null or i.amount <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
+		select i.subject_id, i.hadm_id, i.itemid, a.admittime, i.starttime as charttime, (case when i.amount <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_icu.inputevents i 
 		on a.subject_id = i.subject_id
 		where i.hadm_id is not null
-	--	and i.amount is not null and i.amount > 0
 		and i.itemid in (
-		
 			-- interventions (convert to binary)
-	
 			225828, 225158,		-- IV bolus.  225158=0.9% NaCl (aka Normal Saline),  225828=Lactated Ringers
 			220864, 			-- Albumin 5%
 			220862,				-- Albumin 25%
@@ -1447,7 +1481,8 @@ with total_visits as (
 	 **********************/
 	with o_items as (
 	
-		select o.subject_id, o.hadm_id, o.itemid, a.admittime, o.charttime, (case when o.value is null or o.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
+		-- NOTE: urine output is normal (0), we flag abnormal (1) when urine is measured and there is no appreciable output (see paper)
+		select o.subject_id, o.hadm_id, o.itemid, a.admittime, o.charttime, (case when o.value > 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
 		from mimic_core.admissions a join mimic_icu.outputevents o 
 		on a.subject_id = o.subject_id 
 		where o.hadm_id is not null
@@ -1458,20 +1493,19 @@ with total_visits as (
 			226627,		-- OR Urine
 			226631,		-- PACU Urine
 			227489,		-- U Irrigant/Urine Volume Out
-			
 			226559 		-- Foley catheter (output)	
 	
-			-- Mimic III Urine output (convert to binary)
-	--		226560, -- "Void"
-	--		227510, -- "TF Residual"
-	--		226561, -- "Condom Cath"
-	--		226584, -- "Ileoconduit"
-	--		226563, -- "Suprapubic"
-	--		226564, -- "R Nephrostomy"
-	--		226565, -- "L Nephrostomy"
-	--		226567, --	Straight Cath
-	--		226557, -- "R Ureteral Stent"
-	--		226558  -- "L Ureteral Stent"
+			-- other Urine output (convert to binary)
+--			226560, -- "Void"
+--			227510, -- "TF Residual"
+--			226561, -- "Condom Cath"
+--			226584, -- "Ileoconduit"
+--			226563, -- "Suprapubic"
+--			226564, -- "R Nephrostomy"
+--			226565, -- "L Nephrostomy"
+--			226567, --	Straight Cath
+--			226557, -- "R Ureteral Stent"
+--			226558  -- "L Ureteral Stent"
 			
 		) and o.hadm_id in (
 			-- ids of patients admitted to hospital and stayed for at least 48 hours.
@@ -1490,39 +1524,69 @@ with total_visits as (
 	 * 
 	 * NOTE: numeric values observed are >= 0.
 	 **********************/
-	with p_items as (
-	
-		select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.starttime as charttime, (case when p.value is null or p.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.procedureevents p
-		on a.subject_id = p.subject_id 
-		where p.hadm_id is not null
-		and p.itemid in (
+	with proc_items as (
+		(         select 0 grp, 25955  itemid 	-- Dialysis
+		) union ( select 0 grp, 225809 itemid 
+		) union ( select 0 grp, 225805 itemid 
+		) union ( select 0 grp, 225803 itemid 
+		) union ( select 0 grp, 225802 itemid 
+		) union ( select 0 grp, 225441 itemid 
+		) union ( select 0 grp, 225792 itemid 	-- using Ventilation (units/time)
+		) union ( select 0 grp, 225794 itemid 
+		) union ( select 0 grp, 229351 itemid 	-- Foley Catheter (units/time)
 		
-			-- interventions (convert to binary)
-			25955, 225809, 225805, 225803, 225802, 225441,	-- Dialysis		
-			225792,	225794,									-- using Ventilation (units/time)
+		) union ( select 1 grp, 225402 itemid 	-- EKG (ElectroCardiogram).
+		) union ( select 1 grp, 225432 itemid 	-- TTE (Transthoracic EchoCardiogram)
+		) union ( select 1 grp, 225459 itemid 	-- Chest X-ray.
+		) union ( select 1 grp, 229581 itemid 	-- Chest X-ray. Portable Chest X-ray
+		) union ( select 1 grp, 225457 itemid 	-- Abdominal X-ray
+		) union ( select 1 grp, 221214 itemid 	-- CT Scan (head, neck, chest, and abdomen)
+		) union ( select 1 grp, 229582 itemid 	-- CT Scan (head, neck, chest, and abdomen)  Portable
+		) union ( select 1 grp, 221217 itemid 	-- UltraSound.
+		) union ( select 1 grp, 225401 itemid	-- Blood Culture order 
+		)
+		
+	), results as (
+
+		(
+			-- start time
+			select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.starttime as charttime, (case when p.value is null or p.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
+			from mimic_core.admissions a join mimic_icu.procedureevents p
+			on a.subject_id = p.subject_id 
+			where p.hadm_id is not null
+			and p.itemid in (
+				select itemid
+				from proc_items
+			)
+			and p.hadm_id in (
+				-- ids of patients admitted to hospital and stayed for at least 48 hours.
+				select *
+				from visit_ids
+			)
+			and extract( epoch from age( p.starttime, a.admittime )) between 0 and 172800
 			
-			-- Foley Catheter (convert to binary)
-			229351,				-- Foley Catheter (units/time)	
-			
-			-- diagnostics (binary). almost always value=1
-			225402,				-- EKG (ElectroCardiogram).
-			225432,				-- TTE (Transthoracic EchoCardiogram)
-			225459, 229581,		-- Chest X-ray.  225459=Chest X-ray.  229581=Portable Chest X-ray. 221216=X-Ray
-			225457, 			-- Abdominal X-ray
-			221214, 229582,		-- CT Scan (head, neck, chest, and abdomen).  221214=CT Scan, 229582=Portable CT Scan
-			221217,				-- UltraSound.
-			225401				-- Blood Culture order 
-			
-		) and p.hadm_id in (
-			-- ids of patients admitted to hospital and stayed for at least 48 hours.
-			select *
-			from visit_ids
-		) and extract( epoch from age( p.starttime, a.admittime )) between 0 and 172800
+		) union (
+			-- end time
+			select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.endtime as charttime, 0 as val_num, a.hospital_expire_flag
+			from mimic_core.admissions a join mimic_icu.procedureevents p
+			on a.subject_id = p.subject_id 
+			where p.hadm_id is not null
+			and p.itemid in (
+				select itemid
+				from proc_items
+				where grp = 0
+			) 
+			and p.hadm_id in (
+				-- ids of patients admitted to hospital and stayed for at least 48 hours.
+				select *
+				from visit_ids
+			)
+			and extract( epoch from age( p.endtime, a.admittime )) between 0 and 172800
+		)
 	)
-	select pp.subject_id, pp.hadm_id, pp.itemid, pp.admittime, pp.charttime, v.var_type, pp.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, pp.hospital_expire_flag
-	from p_items pp join val_defaults v
-	on pp.itemid = v.itemid
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag
+	from results r join val_defaults v 
+	on r.itemid = v.itemid
 
 ), examinations as (
 
@@ -1656,16 +1720,16 @@ with total_visits as (
 		--       Therefore we have no idea WHEN the diagnosis was made other than the visit/stay which it occurred.
 		--		 We'll have to assume the diagnosis applies to the entire visit
 		(
-			select c.subject_id, c.hadm_id, c.itemid, a.hospital_expire_flag 
+			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
 			from hosp_events c join mimic_core.admissions a
 			on c.hadm_id = a.hadm_id 
 		) union ( 
-			select c.subject_id, c.hadm_id, c.itemid, a.hospital_expire_flag 
+			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
 			from ed_events c join mimic_core.admissions a
 			on c.hadm_id = a.hadm_id 
 		)
 	)
-	select r.subject_id, r.hadm_id, r.itemid, cast( '1000-01-01 00:00:00.000' as timestamp ) as admittime, cast( '1000-01-01 00:00:00.000' as timestamp ) as charttime, v.var_type, 1 as val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag 
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.admittime as charttime, v.var_type, 1 as val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag 
 	from results r join val_defaults v
 	on r.itemid = v.itemid
 
@@ -1704,6 +1768,9 @@ with total_visits as (
 		from chart_events
 	)
 )
+/***********************************
+ * Final output
+ ***********************************/
 select r.subject_id as patient_id, 
 	r.hadm_id  as visit_id, 
 	r.itemid   as event_id, 
