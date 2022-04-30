@@ -172,7 +172,7 @@ with total_visits as (
 	) union ( select 0 pid, 2 rid, 2 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- ethnicity
 	) union ( select 0 pid, 3 rid, 3 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- previous cardiac arrest
 	) union ( select 0 pid, 4 rid, 4 itemid, 0 var_type, 0 val_num, 0 val_min, 1  val_max, 0 ref_min, 0 ref_max, 0 val_default		-- prior admission to hospital within previous 90 days.
-	) union ( select 0 pid, 5 rid, 5 itemid, 2 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- hour of day
+	) union ( select 0 pid, 5 rid, 5 itemid, 3 var_type, 0 val_num, 0 val_min, 23 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- hour of day
 	) union ( select 0 pid, 6 rid, 6 itemid, 2 var_type, 0 val_num, 0 val_min, 41 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- patient location -- health severity/priority
 	-- vital signs (mimic_icu.chartevents)	
 	) union ( select 0 pid, 7  rid, 223762 itemid, 2 var_type, 37.0  val_num, 27 val_min, 42  val_max, 36.1 ref_min,37.2 ref_max, 37   val_default		-- temperature C
