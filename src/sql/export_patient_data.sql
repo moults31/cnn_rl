@@ -281,16 +281,16 @@ with total_visits as (
 	) union ( select 0 pid, 80 rid, 10024 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- PO Diuretics
 	) union ( select 0 pid, 81 rid, 10025 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default		-- Antibiotics
 	-- Examinations --
-	) union ( select 0 pid, 82 rid, 10026 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Cardiac Paced
-	) union ( select 0 pid, 83 rid, 10027 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Fibrillation
-	) union ( select 0 pid, 84 rid, 10028 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Flutter
-	) union ( select 0 pid, 85 rid, 10029 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Using? (not sure what this is)
-	) union ( select 0 pid, 86 rid, 10030 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Superventricular SVT
-	) union ( select 0 pid, 87 rid, 10031 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VT
-	) union ( select 0 pid, 88 rid, 10032 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VF
-	) union ( select 0 pid, 89 rid, 10033 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Asystole
-	) union ( select 0 pid, 90 rid, 10034 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
-	) union ( select 0 pid, 91 rid, 10035 itemid, 0 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
+	) union ( select 0 pid, 82 rid, 10026 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Cardiac Paced
+	) union ( select 0 pid, 83 rid, 10027 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Fibrillation
+	) union ( select 0 pid, 84 rid, 10028 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Atrial Flutter
+	) union ( select 0 pid, 85 rid, 10029 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Using? (not sure what this is)
+	) union ( select 0 pid, 86 rid, 10030 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Superventricular SVT
+	) union ( select 0 pid, 87 rid, 10031 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VT
+	) union ( select 0 pid, 88 rid, 10032 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- VF
+	) union ( select 0 pid, 89 rid, 10033 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Asystole
+	) union ( select 0 pid, 90 rid, 10034 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Heart Block
+	) union ( select 0 pid, 91 rid, 10035 itemid, 4 var_type, 0 val_num, 0 val_min, 1 val_max, 0 ref_min, 1 ref_max, 0 val_default		-- Junctional Rhythm
 	-- Braden scores
 	) union ( select 0 pid, 92 rid, 224054 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Sensory Perception
 	) union ( select 0 pid, 93 rid, 224055 itemid, 2 var_type, 0 val_num, 0 val_min, 4 val_max, 4 ref_min, 4 ref_max, 4 val_default		-- Braden Moisture
@@ -469,12 +469,12 @@ with total_visits as (
 
 ), patient_chars as (
 
-	/**************************************
+	/**********************************************
 	 * Patient characteristics - age, sex, race, ...
 	 **********************************************/
 	with patient_history as ( 
 		-- 
-		select a.subject_id, a.hadm_id, a.admittime, a.admittime as charttime, p.anchor_age, p.gender, a.ethnicity, (extract( hour from a.admittime)) as "hour", a.hospital_expire_flag 
+		select a.subject_id, a.hadm_id, a.admittime, a.admittime as charttime, p.anchor_age, p.gender, (extract( hour from a.admittime)) as "hour", a.ethnicity, a.hospital_expire_flag 
 		from mimic_core.patients p join mimic_core.admissions a 
 		on p.subject_id = a.subject_id 
 		where a.hadm_id in ( 
@@ -501,13 +501,6 @@ with total_visits as (
 			from patient_history pp	join patient_ethnicity e 
 			on pp.ethnicity = e.ethnicity_name
 			where e.ethnicity_id > 0
-			
-		) union (
-			-- hour of day.  compute hour of day in military time upon admission to hospital.  
-			-- This must be incremented hourly for first 48 hours of the visit.
-			select p.subject_id, p.hadm_id, 5 as itemid, p.admittime, p.charttime, p."hour" as val_num, p.hospital_expire_flag
-			from patient_history p
-			
 		) union (
 			-- prior history of cardiac arrest (experienced in ICU)
 			select a.subject_id, a.hadm_id, 3 as itemid, a.admittime, a.admittime as charttime, 1 as val_num, a.hospital_expire_flag 
@@ -550,6 +543,12 @@ with total_visits as (
 			select t.subject_id, t.hadm_id, 4 as itemid, t.admittime, t.admittime as charttime, 1 as val_num, t.hospital_expire_flag
 			from time_diff t
 			where t.diff > 0
+			
+		) union (
+			-- hour of day.  compute hour of day in military time upon admission to hospital.  
+			-- This must be incremented hourly for first 48 hours of the visit.
+			select p.subject_id, p.hadm_id, 5 as itemid, p.admittime, p.charttime, p.hour as val_num, p.hospital_expire_flag
+			from patient_history p
 		
 		) union (
 			-- patient location
@@ -601,156 +600,6 @@ with total_visits as (
 --			select *
 --			from visit_ids
 --		)
-
-), chart_events as (
-
-	/******************************************
-	 * Vital signs and interventions - ICU charted events
-	 *******************************************/
-	-- use 2-pass system to aggregate data (because it's faster)
-	-- 1st pass collects all variables of interest filtered by first 48 hours after admission
-	-- 2nd pass partitions data into subsets by variable type
-	-- result is merged with val_defaults to inherit variable definitions from patient 0
-	with vitals as (
-		-- select all values of interest within first 48 hours
-	
-		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.value, c.valuenum, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.chartevents c
-		on a.subject_id = c.subject_id 
-		where c.hadm_id is not null
-		and c.itemid in (
-
-			-- interventions (convert to binary)
-			227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow, 
-			227583, 						-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
-			227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
-			226169,							-- using suction (clear the airways?).  values = 0|1
-			
-			-- vital signs (continuous)
-			223835, 					-- FiO2. 223835=Fraction of Inspired O2.  
-			220045, 					-- Heart rate
-			223762,						-- Temperature C
-			223761,						-- Temperature F.
-			220210, 					-- Respiratory Rate
-			220179, 220050,   			-- Blood pressure, systolic.
-			220180, 220051,				-- Blood pressure, diastolic
-			220277, 228232,				-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
-			
-			-- morse / braden scores (continuous)
-			224054,		-- Braden Sensory Perception
-			224055,		-- Braden Moisture
-			224056,		-- Braden Activity
-			224057,		-- Braden Mobility
-			224058,		-- Braden Nutrition
-			224059,		-- Braden Friction/Shear
-			
-			227341,		-- Morse, History of falling (within 3 mnths)
-			227342,		-- Morse, Secondary diagnosis
-			227343,		-- Morse, Ambulatory aid
-			227344,		-- Morse, IV/Saline lock
-			227345,		-- Morse, Gait/Transferring
-			227346,		-- Morse, Mental status
-			227348,		-- Morse score, is Low risk (25-50) interventions
-			227349, 	-- Morse score, is High risk (>51) interventions
-			
-			226104		-- Conscious level (AVPU).  227428=SOFA score, 226755=Glasgow Apache 2 score, 226994=Apache IV mortality prediction, 227013=GcsScore_ApacheIV Score				
-			
-		) and c.hadm_id in (
-			select *
-			from visit_ids
-		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
-		
-	), c_results as ( 
-		-- shape and mold the subsets within the selection, then merge.
-		-- we do a 2-pass system because it's faster.
-
-		(
-			-- binary variables
-			-- we need to export both 'on' and 'off' states, interpreted by flow rate.
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, (case when v.valuenum > 0 then 1 else 0 end) as val_num, v.hospital_expire_flag
-			from vitals v
-			where v.valuenum is not null
-			and v.itemid in ( 
-				227579, 227580, 227581, 227582,	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow
-				227287,							-- using HFNC.  O2 Flow (additional cannula). values=numeric
-				226169							-- using Suction
-			)
-			
-		) union (
-		
-			-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
-			-- must parse separately because 'valuenum' is always NULL and uses value instead with text labels		
-			with cpap as (
-				(         select 'Off' setting, 0 id
-				) union ( select 'On'  setting, 1 id
-				)
-			)		
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, cp.id as val_num, v.hospital_expire_flag
-			from vitals v join cpap cp 
-			on v.value = cp.setting
-			and v.itemid = 227583
-	
-		) union (
-			-- continuous variables 
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, v.valuenum as val_num, v.hospital_expire_flag
-			from vitals v
-			where v.valuenum is not null 
-			and v.itemid in ( 
-				223835, 					-- FiO2. 223835=Fraction of Inspired O2.  
-				220045, 					-- Heart rate
-				223762,						-- Temperature C
-				223761,						-- Temperature F.
-				220210, 					-- Respiratory Rate
-				220179, 220050,   			-- Blood pressure, systolic.
-				220180, 220051,				-- Blood pressure, diastolic
-				220277, 228232,				-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
-				
-				-- morse / braden scores (continuous)
-				224054,		-- Braden Sensory Perception
-				224055,		-- Braden Moisture
-				224056,		-- Braden Activity
-				224057,		-- Braden Mobility
-				224058,		-- Braden Nutrition
-				224059,		-- Braden Friction/Shear
-				
-				227341,		-- Morse, History of falling (within 3 mnths)
-				227342,		-- Morse, Secondary diagnosis
-				227343,		-- Morse, Ambulatory aid
-				227344,		-- Morse, IV/Saline lock
-				227345,		-- Morse, Gait/Transferring
-				227346,		-- Morse, Mental status
-				227348,		-- Morse score, is Low risk (25-50) interventions
-				227349		-- Morse score, is High risk (>51) interventions		
-			)
-			
-		) union (
-			-- Conscuous level score (AVPU).  Must parse separately because it's values are text, not numeric.
-				
-			with avpu_scores as (
-			
-				-- standard scores --
-				(         select 'Alert'                 score_name, 0 score
-				) union ( select 'Arouse to Voice'       score_name, 1 score
-				) union ( select 'Arouse to Pain'        score_name, 2 score
-				) union ( select 'Unresponsive'          score_name, 3 score
-				-- non-standard scores --
-				) union ( select 'Lethargic'             score_name, 1 score
-				) union ( select 'Awake/Unresponsive'    score_name, 2 score
-				) union ( select 'Arouse to Stimulation' score_name, 2 score
-				)
-				
-			)
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, a.score as val_num, v.hospital_expire_flag
-			from vitals v join avpu_scores a
-			on v.value = a.score_name
-			where v.value is not null 
-			and v.itemid = 226104
-		)
-	)
-	-- merge with val_defaults to inherit variable definition
-	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag
-	from c_results r join val_defaults v 
-	on r.itemid = v.itemid
 	
 ), labs as (
 
@@ -1525,6 +1374,7 @@ with total_visits as (
 	 * NOTE: numeric values observed are >= 0.
 	 **********************/
 	with proc_items as (
+		-- interventions procedures
 		(         select 0 grp, 25955  itemid 	-- Dialysis
 		) union ( select 0 grp, 225809 itemid 
 		) union ( select 0 grp, 225805 itemid 
@@ -1534,7 +1384,7 @@ with total_visits as (
 		) union ( select 0 grp, 225792 itemid 	-- using Ventilation (units/time)
 		) union ( select 0 grp, 225794 itemid 
 		) union ( select 0 grp, 229351 itemid 	-- Foley Catheter (units/time)
-		
+		-- imaging
 		) union ( select 1 grp, 225402 itemid 	-- EKG (ElectroCardiogram).
 		) union ( select 1 grp, 225432 itemid 	-- TTE (Transthoracic EchoCardiogram)
 		) union ( select 1 grp, 225459 itemid 	-- Chest X-ray.
@@ -1683,18 +1533,18 @@ with total_visits as (
 		) union ( select 10035 itemid, '' icd_code
 		)
 		
-	), hosp_events as (
-	
-		-- search hospital for cardiac examinations
-
-		select di.subject_id, di.hadm_id, ii.itemid
-		from mimic_hosp.diagnoses_icd di join icd_itemid ii
-		on di.icd_code = ii.icd_code
-		where di.hadm_id is not null 
-		and di.icd_code in ( 
-			select i.icd_code
-			from icd_itemid i
-		)
+--	), hosp_events as (
+--	
+--		-- search hospital for cardiac examinations
+--
+--		select di.subject_id, di.hadm_id, ii.itemid
+--		from mimic_hosp.diagnoses_icd di join icd_itemid ii
+--		on di.icd_code = ii.icd_code
+--		where di.hadm_id is not null 
+--		and di.icd_code in ( 
+--			select i.icd_code
+--			from icd_itemid i
+--		)
 		
 	), ed_events as (
 	
@@ -1719,20 +1569,184 @@ with total_visits as (
 		-- NOTE: ICD billing codes do not have timestamps associated with the records.
 		--       Therefore we have no idea WHEN the diagnosis was made other than the visit/stay which it occurred.
 		--		 We'll have to assume the diagnosis applies to the entire visit
-		(
-			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
-			from hosp_events c join mimic_core.admissions a
-			on c.hadm_id = a.hadm_id 
-		) union ( 
+--		(
+--			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
+--			from hosp_events c join mimic_core.admissions a
+--			on c.hadm_id = a.hadm_id 
+--		) union ( 
 			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
 			from ed_events c join mimic_core.admissions a
 			on c.hadm_id = a.hadm_id 
-		)
+--		)
 	)
 	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.admittime as charttime, v.var_type, 1 as val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag 
 	from results r join val_defaults v
 	on r.itemid = v.itemid
 
+), chart_events as (
+
+	/******************************************
+	 * Vital signs and interventions - ICU charted events
+	 *******************************************/
+	-- use 2-pass system to aggregate data (because it's faster)
+	-- 1st pass collects all variables of interest filtered by first 48 hours after admission
+	-- 2nd pass partitions data into subsets by variable type
+	-- result is merged with val_defaults to inherit variable definitions from patient 0
+	with vital_ids as (
+		-- interventions (convert to binary)
+		(         select 227579 itemid, 0 grp	-- using BiPAP [numeric] 227579=EPAP, 227580=IPAP, 227581=BiPap bpm (S/T -Back up), 227582=O2 flow, 
+		) union ( select 227580 itemid, 0 grp
+		) union ( select 227581 itemid, 0 grp
+		) union ( select 227582 itemid, 0 grp
+		) union ( select 227583 itemid, 3 grp	-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
+		) union ( select 227287 itemid, 0 grp	-- using HFNC.  O2 Flow (additional cannula). values=numeric
+		) union ( select 226169 itemid, 0 grp	-- using suction (clear the airways?).  values = 0|1
+		-- vital signs (continuous)
+		) union ( select 223835 itemid, 1 grp	-- FiO2. 223835=Fraction of Inspired O2.
+		) union ( select 220045 itemid, 1 grp1	-- Heart rate
+		) union ( select 223762 itemid, 1 grp	-- Temperature C
+		) union ( select 223761 itemid, 1 grp	-- Temperature F.
+		) union ( select 220210 itemid, 1 grp	-- Respiratory Rate
+		) union ( select 220179 itemid, 1 grp	-- Blood pressure, systolic.
+		) union ( select 220050 itemid, 1 grp
+		) union ( select 220180 itemid, 1 grp	-- Blood pressure, diastolic
+		) union ( select 220051 itemid, 1 grp
+		) union ( select 220277 itemid, 1 grp	-- O2 saturation.  228232=PAR-Oxygen saturation (routine vital signs). 220277=O2 saturation pulseoxymetry (SpO2),  223770,223769=SpO2 alarms
+		) union ( select 228232 itemid, 1 grp
+		-- morse / braden scores (continuous)
+		) union ( select 224054 itemid, 1 grp	-- Braden Sensory Perception
+		) union ( select 224055 itemid, 1 grp	-- Braden Moisture
+		) union ( select 224056 itemid, 1 grp	-- Braden Activity
+		) union ( select 224057 itemid, 1 grp	-- Braden Mobility
+		) union ( select 224058 itemid, 1 grp	-- Braden Nutrition
+		) union ( select 224059 itemid, 1 grp	-- Braden Friction/Shear
+		) union ( select 227341 itemid, 1 grp	-- Morse, History of falling (within 3 mnths)
+		) union ( select 227342 itemid, 1 grp	-- Morse, Secondary diagnosis
+		) union ( select 227343 itemid, 1 grp	-- Morse, Ambulatory aid
+		) union ( select 227344 itemid, 1 grp	-- Morse, IV/Saline lock
+		) union ( select 227345 itemid, 1 grp	-- Morse, Gait/Transferring
+		) union ( select 227346 itemid, 1 grp	-- Morse, Mental status
+		) union ( select 227348 itemid, 1 grp	-- Morse score, is Low risk (25-50) interventions
+		) union ( select 227349 itemid, 1 grp	-- Morse score, is High risk (>51) interventions
+		) union ( select 226104 itemid, 2 grp	-- Conscious level (AVPU).  227428=SOFA score, 226755=Glasgow Apache 2 score, 226994=Apache IV mortality prediction, 227013=GcsScore_ApacheIV Score	
+		-- cardiac rhythm 
+		) union ( select 220048 itemid, 4 grp	-- Cardiac Rhythm (includes: Asystole, Atrial Fibrillation, Atrial Flutter, SVT, VT, VF, Paced?, Heart Block, Junctional Rhythm)
+		)
+	), vitals as (
+		-- select all values of interest within first 48 hours
+	
+		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.value, c.valuenum, a.hospital_expire_flag
+		from mimic_core.admissions a join mimic_icu.chartevents c
+		on a.subject_id = c.subject_id 
+		where c.hadm_id is not null
+		and c.itemid in (
+			select vi.itemid
+			from vital_ids vi
+		) and c.hadm_id in (
+			select *
+			from visit_ids
+		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
+		
+	), c_results as ( 
+		-- shape and mold the subsets within the selection, then merge.
+		-- we do a 2-pass system because it's faster.
+
+		(
+			-- BiPAP, EPAP, IPAP (binary variables) Must export both 'on' and 'off' states, interpreted by flow rate.
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, (case when v.valuenum > 0 then 1 else 0 end) as val_num, v.hospital_expire_flag
+			from vitals v
+			where v.valuenum is not null
+			and v.itemid in ( 
+				select vi.itemid
+				from vital_ids vi
+				where vi.grp = 0
+			)
+			
+		) union (
+		
+			-- using CPAP (Constant Positive Airway Pressure).  values="On|Off"
+			-- must parse separately because 'valuenum' is always NULL and uses value instead with text labels		
+			with cpap_modes as (
+				(         select 'Off' setting, 0 id
+				) union ( select 'On'  setting, 1 id
+				)
+			)		
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, cp.id as val_num, v.hospital_expire_flag
+			from vitals v join cpap_modes cp 
+			on v.value = cp.setting
+			and v.itemid in (
+				select vi.itemid
+				from vital_ids vi
+				where vi.grp = 3
+			)
+	
+		) union (
+			-- Vitals and Morse/Braden scores. (continuous variables)
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, v.valuenum as val_num, v.hospital_expire_flag
+			from vitals v
+			where v.valuenum is not null 
+			and v.itemid in ( 
+				select vi.itemid
+				from vital_ids vi
+				where vi.grp = 1
+			)
+			
+		) union (
+			-- Conscuous level score (AVPU).  Must parse separately because it's values are text, not numeric.
+				
+			with avpu_scores as (
+			
+				-- standard scores --
+				(         select 'Alert'                 score_name, 0 score
+				) union ( select 'Arouse to Voice'       score_name, 1 score
+				) union ( select 'Arouse to Pain'        score_name, 2 score
+				) union ( select 'Unresponsive'          score_name, 3 score
+				-- non-standard scores --
+				) union ( select 'Lethargic'             score_name, 1 score
+				) union ( select 'Awake/Unresponsive'    score_name, 2 score
+				) union ( select 'Arouse to Stimulation' score_name, 2 score
+				)
+			)
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, a.score as val_num, v.hospital_expire_flag
+			from vitals v join avpu_scores a
+			on v.value = a.score_name
+			where v.value is not null 
+			and v.itemid in (
+				select vi.itemid
+				from vital_ids vi
+				where vi.grp = 2
+			)
+			
+		) union (
+			-- Examinations: Cardiac Rhythm and related (binary variables)
+			with cardiac_items as (
+				        ( select '3rd AV (Complete Heart Block) '                             diagnosis, 10034 itemid
+				) union ( select 'AF (Atrial Fibrillation)'                                   diagnosis, 10027 itemid
+				) union ( select 'A Flut (Atrial Flutter) '                                   diagnosis, 10028 itemid
+				) union ( select 'A Paced'                                                    diagnosis, 10026 itemid
+				) union ( select 'Asystole'                                                   diagnosis, 10033 itemid
+				) union ( select 'AV Paced'                                                   diagnosis, 10026 itemid
+				) union ( select 'JR (Junctional Rhythm)'                                     diagnosis, 10035 itemid
+				) union ( select 'SVT (Supra Ventricular Tachycardia)'                        diagnosis, 10030 itemid
+				) union ( select 'VF (Ventricular Fibrillation) '                             diagnosis, 10032 itemid
+				) union ( select 'V Paced'                                                    diagnosis, 10026 itemid
+				) union ( select 'VT (Ventricular Tachycardia) '                              diagnosis, 10031 itemid
+				)
+			)
+			select v.subject_id, v.hadm_id, ci.itemid, v.admittime, v.charttime, 1 as val_num, v.hospital_expire_flag
+			from vitals v join cardiac_items ci
+			on v.value = ci.diagnosis
+			where v.itemid in (
+				select vi.itemid
+				from vital_ids vi
+				where vi.grp = 4
+			)
+		)
+	)
+	-- merge with val_defaults to inherit variable definition
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag
+	from c_results r join val_defaults v 
+	on r.itemid = v.itemid
 	
 ), results as (
 	/*********************************
@@ -1773,7 +1787,7 @@ with total_visits as (
  ***********************************/
 select r.subject_id as patient_id, 
 	r.hadm_id  as visit_id, 
-	r.itemid   as event_id, 
+	r.itemid   as event_id,
 	cast( (extract( epoch from age( r.charttime, r.admittime )) /  3600) as INT ) as "hour",
 	r.var_type as var_type,
 	r.val_num  as val_num,
@@ -1783,6 +1797,7 @@ select r.subject_id as patient_id,
 	r.ref_max  as ref_max,
 	r.val_default as val_default,
 	r.hospital_expire_flag as died
-from results r
+from results r join val_defaults v 
+on r.itemid = v.itemid
 order by subject_id asc, charttime asc, hadm_id asc;
 
