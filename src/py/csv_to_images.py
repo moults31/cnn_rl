@@ -13,35 +13,37 @@ import clinical_scores
 # Optional suffix for output image name, use for debugging.
 OUT_IMG_SUFFIX = ''
 
-def parse_csv_to_images(csv_file: str):
+def parse_csv_to_images( csv_file: str ):
     """
     Top-level function that loads the provided 
     csv and saves images to disk as png.
     """
     patient_visits = dict()
-    unknown_items = list()
+    unknown_items  = list()
 
     item2feature, stats = generate_stats()
 
-    print(f"Parsing {csv_file}")
+    print( f"Parsing {csv_file}" )
     parse_start_time = time.time()
-    with open(csv_file, 'r') as f:
-        i = 0
-        i_batch = 0
+    with open( csv_file, 'r' ) as f:
+    
+        i             = 0
+        i_batch       = 0
         visit_id_prev = 0
+        
         for row in reader(f):
             if i == 0:
                 # Skip header row, we'll parse the columns ourselves
                 i = i + 1
                 continue
 
-            if int(row[common.Input_event_col.PATIENT_ID]) == common.MAPPING_PATIENT_ID:
+            if int( row[common.Input_event_col.PATIENT_ID] ) == common.MAPPING_PATIENT_ID:
                 # Skip rows with our special patient id.
                 continue
 
             # Apply names to each column
             patient_id, visit_id, itemid, hour, var_type, val_num, \
-                val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag = cast_csv_row(row)
+                val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag = cast_csv_row( row )
 
             # Skip patient ids outside our range limits
             if common.CSV_PARSER_PATIENTID_DO_LIMIT:
@@ -57,12 +59,12 @@ def parse_csv_to_images(csv_file: str):
             # If we don't have a row mapping for this itemid, note that down
             if not itemid in item2feature:
                 if not itemid in unknown_items:
-                    unknown_items.append(itemid)
+                    unknown_items.append( itemid )
                 continue
 
             # Get the object for this patient, creating one if we haven't seen them before
             if not visit_id in patient_visits:
-                patient_visits[visit_id] = patient_visit.Patient_visit(patient_id, visit_id, hospital_expire_flag, stats, item2feature)
+                patient_visits[visit_id] = patient_visit.Patient_visit( patient_id, visit_id, hospital_expire_flag, stats, item2feature )
             subject = patient_visits[visit_id]
 
             # Lookup Feature ID
@@ -70,13 +72,17 @@ def parse_csv_to_images(csv_file: str):
 
             # If this item ID falls in the range of our special ones, handle that
             if itemid in [item.value for item in common.Special_itemids]:
-                handle_special_itemid(itemid, val_num, subject, stats, item2feature)
+                handle_special_itemid( itemid, val_num, subject, stats, item2feature )
             else:
                 # Otherwise, normalize valuenum
-                valuenum_norm = common.normalize(stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid)
+                valuenum_norm = common.normalize( stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid )
 
-                # Write valuenum to the remainder of the appropriate row
-                subject.img[feature_id, hour:] = valuenum_norm
+                if var_type == 4:       # <-- NOTE: need to update so it isn't hard-coded like this
+                    # Write valuenum to specified hour without carry-over
+                    subject.img[feature_id, hour] = valuenum_norm
+                else:
+                    # Write valuenum to the remainder of the appropriate row
+                    subject.img[feature_id, hour:] = valuenum_norm
 
             # Record clinical score component vals if relevant to this itemid
             record_clinical_score_component(itemid, val_num, hour, subject, item2feature)
@@ -105,29 +111,29 @@ def parse_csv_to_images(csv_file: str):
             print(item)
 
     # Process the final partial batch
-    process_batch_images_and_clinical_scores(patient_visits, stats, item2feature)
+    process_batch_images_and_clinical_scores( patient_visits, stats, item2feature )
 
-    print("Parsing took {:.2f} sec".format(time.time() - parse_start_time))
+    print("Parsing took {:.2f} sec".format( time.time() - parse_start_time) )
 
-def process_batch_images_and_clinical_scores(patient_visits, stats, item2feature):
+def process_batch_images_and_clinical_scores( patient_visits, stats, item2feature ):
     """
     Function to process a batch. Generates images, tallies braden/morse, and computes MEWS/SOFA.
     """
     # Generate images
-    print(f"Generating {len(patient_visits)} images")
+    print( f"Generating {len(patient_visits)} images" )
     gen_start_time = time.time()
-    generate_images(patient_visits)
-    print("Image generation took {:.2f} sec".format(time.time() - gen_start_time))
+    generate_images( patient_visits )
+    print("Image generation took {:.2f} sec".format( time.time() - gen_start_time) )
 
     # Tally braden/sofa
-    tally_clinical_scores(patient_visits, stats, item2feature)
+    tally_clinical_scores( patient_visits, stats, item2feature )
 
     # Compute MEWS/SOFA
     print("Computing clinical scores")
     clinical_scores_start_time = time.time()
-    clinical_scores.compute_mews(patient_visits, stats)
-    clinical_scores.compute_sofa(patient_visits, stats)
-    print("Clinical scores took {:.2f} sec".format(time.time() - clinical_scores_start_time))
+    clinical_scores.compute_mews( patient_visits, stats )
+    clinical_scores.compute_sofa( patient_visits, stats )
+    print("Clinical scores took {:.2f} sec".format( time.time() - clinical_scores_start_time) )
 
 def generate_stats():
     """
@@ -151,13 +157,13 @@ def generate_stats():
                 row_id = int(row[common.Input_event_col.VISIT_ID])
                 item2feature[int(row[common.Input_event_col.EVENT_ID])] = row_id
 
-                stats[row_id][common.Stats_col.VAR_TYPE] = float(row[common.Input_event_col.VAR_TYPE])
-                stats[row_id][common.Stats_col.VAL_NUM] = float(row[common.Input_event_col.VAL_NUM])
-                stats[row_id][common.Stats_col.VAL_MIN] = float(row[common.Input_event_col.VAL_MIN])
-                stats[row_id][common.Stats_col.VAL_MAX] = float(row[common.Input_event_col.VAL_MAX])
-                stats[row_id][common.Stats_col.REF_MIN] = float(row[common.Input_event_col.REF_MIN])
-                stats[row_id][common.Stats_col.REF_MAX] = float(row[common.Input_event_col.REF_MAX])
-                stats[row_id][common.Stats_col.VAL_DEFAULT] = float(row[common.Input_event_col.VAL_DEFAULT])
+                stats[row_id][common.Stats_col.VAR_TYPE]    = float( row[common.Input_event_col.VAR_TYPE]    )
+                stats[row_id][common.Stats_col.VAL_NUM ]    = float( row[common.Input_event_col.VAL_NUM ]    )
+                stats[row_id][common.Stats_col.VAL_MIN ]    = float( row[common.Input_event_col.VAL_MIN ]    )
+                stats[row_id][common.Stats_col.VAL_MAX ]    = float( row[common.Input_event_col.VAL_MAX ]    )
+                stats[row_id][common.Stats_col.REF_MIN ]    = float( row[common.Input_event_col.REF_MIN ]    )
+                stats[row_id][common.Stats_col.REF_MAX ]    = float( row[common.Input_event_col.REF_MAX ]    )
+                stats[row_id][common.Stats_col.VAL_DEFAULT] = float( row[common.Input_event_col.VAL_DEFAULT] )
 
                 i = i + 1
             else:
@@ -172,18 +178,18 @@ def cast_csv_row(row: list):
     """
     Casts each element of the provided row to the correct datatype
     """
-    patient_id  = int(row[common.Input_event_col.PATIENT_ID])
-    visit_id    = int(row[common.Input_event_col.VISIT_ID])
-    itemid      = int(row[common.Input_event_col.EVENT_ID])
-    hour        = int(row[common.Input_event_col.HOUR])
-    var_type    = int(row[common.Input_event_col.VAR_TYPE])
-    val_num     = float(row[common.Input_event_col.VAL_NUM])
-    val_min     = float(row[common.Input_event_col.VAL_MIN])
-    val_max     = float(row[common.Input_event_col.VAL_MAX])
-    ref_min     = float(row[common.Input_event_col.REF_MIN])
-    ref_max     = float(row[common.Input_event_col.REF_MAX])
-    val_default = float(row[common.Input_event_col.VAL_DEFAULT])
-    hospital_expire_flag = int(row[common.Input_event_col.DIED])
+    patient_id  = int(   row[common.Input_event_col.PATIENT_ID]  )
+    visit_id    = int(   row[common.Input_event_col.VISIT_ID]    )
+    itemid      = int(   row[common.Input_event_col.EVENT_ID]    )
+    hour        = int(   row[common.Input_event_col.HOUR]        )
+    var_type    = int(   row[common.Input_event_col.VAR_TYPE]    )
+    val_num     = float( row[common.Input_event_col.VAL_NUM]     )
+    val_min     = float( row[common.Input_event_col.VAL_MIN]     )
+    val_max     = float( row[common.Input_event_col.VAL_MAX]     )
+    ref_min     = float( row[common.Input_event_col.REF_MIN]     )
+    ref_max     = float( row[common.Input_event_col.REF_MAX]     )
+    val_default = float( row[common.Input_event_col.VAL_DEFAULT] )
+    hospital_expire_flag = int( row[common.Input_event_col.DIED] )
 
     return patient_id, visit_id, itemid, hour, var_type, \
         val_num, val_min, val_max, ref_min, ref_max, val_default, hospital_expire_flag
@@ -193,26 +199,26 @@ def record_clinical_score_component(itemid, val_num, hour, visit, item2feature):
     Record the value of a clinical score component for a given patient on a given hour
     """
     if itemid in common.braden_item2row:
-        visit.braden[common.braden_item2row[itemid], hour] = val_num
+        visit.braden[ common.braden_item2row[itemid], hour ] = val_num
 
     if itemid in common.morse_item2row:
-        visit.morse[common.morse_item2row[itemid], hour] = val_num
+        visit.morse[ common.morse_item2row[itemid], hour ] = val_num
 
     feature_id = item2feature[itemid]
     if feature_id in common.mews_featureids:
         # Do a reverse lookup. Slow :(
-        for i in range(len(common.mews_featureids)):
+        for i in range( len(common.mews_featureids) ):
             if common.mews_featureids[i] == feature_id:
                 visit.mews[i, hour:] = val_num
 
     if feature_id in common.sofa_featureids:
         # Do a reverse lookup. Slow :(
-        for i in range(len(common.sofa_featureids)):
+        for i in range(len( common.sofa_featureids) ):
             if common.sofa_featureids[i] == feature_id:
                 visit.sofa[i, hour:] = val_num
 
 
-def tally_clinical_scores(patient_visits, stats, item2feature):
+def tally_clinical_scores( patient_visits, stats, item2feature ):
     """
     Handles itemids that have special meanings. Often involves directly updating
     the image for the given patient. 
@@ -272,6 +278,7 @@ def tally_clinical_scores(patient_visits, stats, item2feature):
             # Write morse/braden timelines to image
             if braden[hour] != braden_cumulative_default_normalized:
                 visit.img[common.BRADEN_ROWID, hour:] = braden_normalized[hour]
+                
             if morse[hour] != morse_cumulative_default_normalized:
                 visit.img[common.MORSE_ROWID, hour:] = morse_normalized[hour]
 
@@ -333,15 +340,18 @@ def generate_images(patient_visits: dict):
 
         # Determine which split this patient will fall into and set the path accordingly.
         # Todo: Add a feature for shuffling splits
-        img_path = os.getenv('IMAGES_DIR')
-        split = common.get_split_as_string(i, len(patient_visits))
-        img_path = os.path.join(img_path, split)
+        img_path = os.getenv( 'IMAGES_DIR' )
+        split    = common.get_split_as_string( i, len( patient_visits ) )
+        img_path = os.path.join( img_path, split )
 
         # Todo: Come up with a way to open in 'w' mode the first time we touch a file in a given run
-        with open(os.path.join(img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='') as f:
-            label_writer = writer(f, delimiter=',')
+        with open( os.path.join( img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='' ) as f:
+            label_writer = writer( f, delimiter=',' )
 
-            img_name = os.path.join(img_path, f"{visit.patient_id}_{visit.visit_id}_{visit.hospital_expire_flag}{OUT_IMG_SUFFIX}.png")
+            img_name = os.path.join( 
+                img_path, 
+                f"{visit.patient_id}_{visit.visit_id}_{visit.hospital_expire_flag}{OUT_IMG_SUFFIX}.png" 
+            )
             # Write label for this patient into labels.csv
             line = [c.strip() for c in f"{os.path.basename(img_name)}, {visit.hospital_expire_flag}".strip(', ').split(',')]
             label_writer.writerow(line)
@@ -377,5 +387,5 @@ if __name__ == "__main__":
     except:
         pass
 
-    path = os.path.join(os.getenv('DATA_DIR'), csv_file)
-    parse_csv_to_images(path)
+    path = os.path.join( os.getenv('DATA_DIR'), csv_file )
+    parse_csv_to_images( path )
