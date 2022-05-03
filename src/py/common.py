@@ -22,6 +22,8 @@ CLASS_WEIGHT_RATIO = 30.0
 # Default number of epochs. Can be overriden in calls to train_<model>
 N_EPOCH = 20
 
+EVAL_EVERY_EPOCH = True
+
 # Special patient ID where we hide the itemid to rowid mappings
 MAPPING_PATIENT_ID = 0
 
