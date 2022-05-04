@@ -125,6 +125,9 @@ with visit_ids as(
 			-- compute average PaO2 and FiO2 over the visit, otherwise we cannot compute the ratio
 			select s.hadm_id, s.itemid, avg( s.valuenum ) as value
 			from sofa_data s
+			where s.itemid in ( 
+				223835, 50821
+			)
 			group by s.hadm_id, s.itemid
 			
 		), respiration_ratio as (
