@@ -112,6 +112,7 @@ def train_rnn(model, train_dataloader, n_epoch=common.N_EPOCH):
 
     train_start_time = time.time()
     for epoch in range(n_epoch):
+        print(f"##### EPOCH {epoch} START #####")
         curr_epoch_loss = []
         epoch_start_time = time.time()
         i = 0
@@ -135,8 +136,33 @@ def train_rnn(model, train_dataloader, n_epoch=common.N_EPOCH):
             if (i % 10) == 0:
                 print('.', end='', flush=True)
             i = i + 1
+
         print(f"\nEpoch {epoch}: curr_epoch_loss={np.mean(curr_epoch_loss)}")
         print("Epoch took {:.2f} sec".format(time.time() - epoch_start_time))
+
+        # Optionally make predictions and evaluate between every epoch.
+        # Adds a lot of time, but is worth it to get intermediate readouts when training epochs are very slow
+        if(common.EVAL_EVERY_EPOCH):
+            with torch.no_grad():
+                # Put model in eval mode temporarily
+                model.eval()
+
+                # Get entire dataloader
+                _, test_loader, val_loader = common.load_data()
+                # Evaluate the model's predictions against the ground truth
+                y_score_test, y_pred_test, y_test = eval_model(model, test_loader)
+                y_score_val, y_pred_val, y_val = eval_model(model, val_loader)
+
+                # Evaluate the scores' predictions against the ground truth
+                print("\nScores from test split:")
+                common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
+                print("\nScores from val split:")
+                common.evaluate_predictions(y_val, y_pred_val, score=y_score_val)
+            # Put model back in training mode
+            model.train()
+
+        print(f"##### EPOCH {epoch} END #######\n\n")
+
 
     print("Training took {:.2f} sec".format(time.time() - train_start_time))
 
