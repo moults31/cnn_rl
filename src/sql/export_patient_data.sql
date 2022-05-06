@@ -22,113 +22,19 @@ with total_visits as (
 
 	-- total number of hospital visits (523,740)
 	select count(*)
-	from mimic_core.admissions a 
+	from mimic_core.admissions a
 	
 ), visit_ids as (
-/*
-	-- Find all visits where actual time spent in hospital is >= 48 hours.
-	-- ED is recorded independently from the main hospital, but there are many records which the time
-	-- spent in both overlap, are independent, or are reversed.  
-	-- We must inspect all possible scenarios and only count time where the patient is definitively in one place.
 
-	with hosp_stays as (
-
-		-- get all visits where patient only stayed in main hospital/ICU 
-		-- (212,236 total, 212,183 if ignoring negative stay time, 149,819 >= 48 hours)
-		select a.hadm_id 
-		from mimic_core.admissions a 
-		where a.edregtime is null 
-		and a.admittime <= a.dischtime
-		and extract( epoch from age( a.dischtime , a.admittime  )) >= 172800
-		
---	), ed_stays as ( 
---	
---		-- get all visits where the patient only stayed in the emergency department (234,535, but 0 visits >= 48 hours)
---		select e.stay_id 
---		from mimic_ed.edstays e 
---		where e.hadm_id is null
---		and extract( epoch from age( e.outtime, e.intime )) >= 172800
-	
-	), ed_first as (
-	
-		-- get all visits where the ed stay was completed before admission to the hospital 
-		-- (7,168 total, 4835 >= 48 hours)
-		select a.hadm_id 
-		from mimic_core.admissions a 
-		where a.edregtime is not null
-		and a.edouttime <= a.admittime 
-		and a.admittime <= a.dischtime 
-		and a.edregtime <= a.edouttime 
-		and (extract( epoch from age( a.edouttime, a.edregtime )) + extract( epoch from age( a.dischtime, a.admittime ))) >= 172800
-		
-	), hosp_first as ( 
-	
-		-- get all visits where the hosp stay was completed before being admitted to the emergency department 
-		-- (2 total, 1 >= 48 hours)
-		select a.hadm_id 
-		from mimic_core.admissions a 
-		where a.edregtime is not null
-		and a.admittime <= a.dischtime 
-		and a.edregtime <= a.edouttime 
-		and a.dischtime <= a.edregtime  
-		and (extract( epoch from age( a.edouttime, a.edregtime )) + extract( epoch from age( a.dischtime, a.admittime ))) >= 172800
-	
-	), overlapped as (
-	
-		-- get all visits where the hosp and ed visits overlap without gap in between 
-		-- (241,936 total, 181,073 >= 48 hours)
-		with overlap as ( 
-			select 
-				a.hadm_id, 
-				(case when a.admittime <= a.edregtime then a.admittime else a.edregtime end) as admittime,
-				(case when a.dischtime >= a.edouttime then a.dischtime else a.edouttime end) as dischtime
-			from mimic_core.admissions a 
-			where a.edregtime is not null
-			and (a.admittime <= a.dischtime)
-			and (a.edregtime <= a.edouttime)
-			and ( 
-				(a.edregtime < a.admittime and a.admittime < a.edouttime and a.edouttime < a.dischtime)		-- ed starts before hosp
-				or
-				(a.admittime < a.edregtime and a.edregtime < a.dischtime and a.dischtime < a.edouttime)		-- hosp starts before ed
-			)
-		)
-		select o.hadm_id
-		from overlap o
-		where extract( epoch from age( o.dischtime, o.admittime )) >= 172800
-		
-	), results as (
-		(
-			-- hosp only stays
-			select *
-			from hosp_stays
-		) union (
-			-- hosp before ed stays
-			select *
-			from hosp_first
-		) union (
-			-- ed before hosp stays
-			select *
-			from ed_first
-		) union (
-			-- hosp overlap with ed stays
-			select *
-			from overlapped
-		)
-	)
-	-- grand total of patient visits >= 48 hours
-	select distinct r.hadm_id
-	from results r
-*/
 	-- get all visits in ICU >= 48 hours
-	select distinct a.hadm_id 
-	from mimic_core.admissions a 
-	where extract( epoch from age( a.dischtime, a.admittime )) >= 172800
+	select c.hadm_id 
+	from mimic_derived.cohort c
 	
 ), patient_ids as (
 
 	-- get all patients elligible for the study
 	select distinct a.subject_id 
-	from mimic_core.admissions a 
+	from mimic_derived.cohort a 
 	where a.hadm_id in (
 		select *
 		from visit_ids
@@ -194,13 +100,13 @@ with total_visits as (
 	) union ( select 0 pid, 16 rid, 50971 itemid, 2 var_type, 4.188   val_num, 0  val_min, 26  val_max, 3.3 ref_min, 5.4  ref_max, 4.25 val_default		-- Potassium
 	) union ( select 0 pid, 17 rid, 50882 itemid, 2 var_type, 25.510  val_num, 0  val_min, 132 val_max, 22  ref_min, 32   ref_max, 26   val_default		-- Bicarbonate (CO2)
 	) union ( select 0 pid, 18 rid, 50868 itemid, 2 var_type, 14.236  val_num, 0  val_min, 91  val_max, 8   ref_min, 20   ref_max, 14   val_default		-- Anion Gap
-	) union ( select 0 pid, 19 rid, 50931 itemid, 2 var_type, 127.467 val_num, 0  val_min, 300 val_max, 70  ref_min, 105  ref_max, 111  val_default		-- Glucose 1
-	) union ( select 0 pid, 19 rid, 50809 itemid, 2 var_type, 127.467 val_num, 0  val_min, 300 val_max, 70  ref_min, 105  ref_max, 111  val_default		-- Glucose 2
+	) union ( select 0 pid, 19 rid, 50931 itemid, 2 var_type, 127.467 val_num, 0  val_min, 400 val_max, 70  ref_min, 105  ref_max, 111  val_default		-- Glucose 1
+	) union ( select 0 pid, 19 rid, 50809 itemid, 2 var_type, 127.467 val_num, 0  val_min, 400 val_max, 70  ref_min, 105  ref_max, 111  val_default		-- Glucose 2
 	) union ( select 0 pid, 20 rid, 50893 itemid, 2 var_type, 8.791   val_num, 0  val_min, 132 val_max, 8.4 ref_min, 10.3 ref_max, 9    val_default		-- Calcium
 	) union ( select 0 pid, 21 rid, 51006 itemid, 2 var_type, 23.866  val_num, 0  val_min, 200 val_max, 6   ref_min, 20   ref_max, 18   val_default		-- Blood Urea Nitrogen (BUN) 1
 	) union ( select 0 pid, 21 rid, 52647 itemid, 2 var_type, 23.866  val_num, 0  val_min, 200 val_max, 6   ref_min, 20   ref_max, 18   val_default		-- Blood Urea Nitrogen (BUN) 2
-	) union ( select 0 pid, 22 rid, 50912 itemid, 2 var_type, 1.329   val_num, 0  val_min, 100 val_max, 0.45 ref_min,1.15 ref_max, 0    val_default		-- Serium Creatinine (SCr)
-	) union ( select 0 pid, 23 rid, 11111 itemid, 2 var_type, 0       val_num, 0  val_min, 0   val_max, 0   ref_min, 0    ref_max, 0    val_default		-- BUN / SCr ratio
+	) union ( select 0 pid, 22 rid, 50912 itemid, 2 var_type, 1.329   val_num, 0  val_min, 20  val_max, 0.45 ref_min,1.15 ref_max, 0    val_default		-- Serum Creatinine (SCr)
+	) union ( select 0 pid, 23 rid, 11111 itemid, 2 var_type, 0       val_num, 0  val_min, 30  val_max, 10  ref_min, 20   ref_max, 0    val_default		-- BUN / SCr ratio
 	) union ( select 0 pid, 24 rid, 50970 itemid, 2 var_type, 3.555   val_num, 0  val_min, 50  val_max, 2.7 ref_min, 4.5  ref_max, 3.45 val_default		-- Phosphate
 	-- LiverFunction Test -- (mimic_hosp.labevents)
 	) union ( select 0 pid, 25 rid, 50976 itemid, 2 var_type, 6.838  val_num, 0 val_min, 19  val_max, 6.4 ref_min, 8.3 ref_max, 6.85 val_default		-- Total Protein
@@ -475,7 +381,7 @@ with total_visits as (
 	with patient_history as ( 
 		-- 
 		select a.subject_id, a.hadm_id, a.admittime, a.admittime as charttime, p.anchor_age, p.gender, (extract( hour from a.admittime)) as "hour", a.ethnicity, a.hospital_expire_flag 
-		from mimic_core.patients p join mimic_core.admissions a 
+		from mimic_core.patients p join mimic_core.admissions a
 		on p.subject_id = a.subject_id 
 		where a.hadm_id in ( 
 			select *
@@ -504,7 +410,7 @@ with total_visits as (
 		) union (
 			-- prior history of cardiac arrest (experienced in ICU)
 			select a.subject_id, a.hadm_id, 3 as itemid, a.admittime, a.admittime as charttime, 1 as val_num, a.hospital_expire_flag 
-			from mimic_core.admissions a join mimic_icu.procedureevents p 
+			from mimic_derived.cohort a join mimic_icu.procedureevents p 
 			on a.subject_id = p.subject_id
 			where p.value is not null
 			and p.itemid = 225466 
@@ -522,7 +428,7 @@ with total_visits as (
 			
 				-- get patient data from admissions table. Convert admittime to epoch time for easier math
 				select a.subject_id, a.hadm_id, a.admittime, extract( epoch from a.admittime ) as intime, extract( epoch from a.dischtime ) as outtime, a.hospital_expire_flag 
-				from mimic_core.admissions a 
+				from mimic_derived.cohort a 
 				where a.hadm_id in (
 					select *
 					from visit_ids
@@ -564,17 +470,17 @@ with total_visits as (
 				and t.eventtype <> 'discharge'
 			)
 			select a.subject_id, a.hadm_id, 6 as itemid, a.admittime, ht.intime as charttime, ht.ward_id as val_num, a.hospital_expire_flag 
-			from mimic_core.admissions a join hosp_transfers ht 
+			from mimic_derived.cohort a join hosp_transfers ht 
 			on a.hadm_id = ht.hadm_id
-			where a.hadm_id in ( 
-				select *
-				from visit_ids
-			)
-			and extract( epoch from age( ht.intime, a.admittime )) between 0 and 172800
+--			where a.hadm_id in ( 
+--				select *
+--				from visit_ids
+--			)
+			where extract( epoch from age( ht.intime, a.admittime )) between 0 and a.icu_limit
 		)
 	)
 	-- merge with val_defaults to inherit variable definitions
-	select p.subject_id, p.hadm_id, p.itemid, p.admittime, p.charttime, v.var_type, p.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, p.hospital_expire_flag
+	select p.subject_id, p.hadm_id, p.itemid, p.admittime, p.charttime, v.var_type, p.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, p.hospital_expire_flag, p.admittime as time_in, 0 as gap
 	from p_items p join val_defaults v 
 	on p.itemid = v.itemid
 	
@@ -594,7 +500,7 @@ with total_visits as (
 --			when a.admission_type = 'EW EMER.'               then 9
 --			else 0 end
 --		) as val_num, 0 as val_min, 9 as val_max, 1 as ref_min, 9 as ref_max, 0 as val_default, a.hospital_expire_flag
---		from mimic_core.admissions a join mimic_core.patients p 
+--		from mimic_derived.cohort a join mimic_core.patients p 
 --		on a.subject_id = p.subject_id 
 --		and a.hadm_id in (
 --			select *
@@ -612,8 +518,8 @@ with total_visits as (
 			-- special case: 51484=ketones (urine).  
 			-- Many of the records have NULL valuenum and reference ranges.  
 			-- Must explicitly cast to comply with everything else downstream
-			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, 0 as ref_min, 0 as ref_max, a.hospital_expire_flag
-			from mimic_core.admissions a join mimic_hosp.labevents l
+			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, 0 as ref_min, 0 as ref_max, a.hospital_expire_flag, a.time_in, a.gap
+			from mimic_derived.cohort a join mimic_hosp.labevents l
 			on a.subject_id = l.subject_id 
 			where l.hadm_id is not null
 			and l.itemid = 51484		-- Ketones (Urine).
@@ -621,12 +527,12 @@ with total_visits as (
 				select *
 				from visit_ids
 			) 
-			and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
+			and extract( epoch from age( l.charttime, a.admittime )) between 0 and a.icu_limit
 			
 		) union (
 		
-			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, l.ref_range_lower as ref_min, l.ref_range_upper as ref_max, a.hospital_expire_flag
-			from mimic_core.admissions a join mimic_hosp.labevents l
+			select l.subject_id, l.hadm_id, l.itemid, a.admittime, l.charttime, (case when l.valuenum is null then 0 else l.valuenum end) as valuenum, l.ref_range_lower as ref_min, l.ref_range_upper as ref_max, a.hospital_expire_flag, a.time_in, a.gap
+			from mimic_derived.cohort a join mimic_hosp.labevents l
 			on a.subject_id = l.subject_id 
 			where l.hadm_id is not null
 			and l.itemid in (
@@ -664,10 +570,10 @@ with total_visits as (
 			) and l.hadm_id in (
 				select *
 				from visit_ids
-			) and extract( epoch from age( l.charttime, a.admittime )) between 0 and 172800
+			) and extract( epoch from age( l.charttime, a.admittime )) between 0 and a.icu_limit
 		)
 	)
-	select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, v.valuenum as val_num, d.val_min, d.val_max, v.ref_min, v.ref_max, d.val_default, v.hospital_expire_flag
+	select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, d.var_type, v.valuenum as val_num, d.val_min, d.val_max, v.ref_min, v.ref_max, d.val_default, v.hospital_expire_flag, v.time_in, v.gap
 	from lab_values v join val_defaults d 
 	on v.itemid = d.itemid
 	
@@ -1250,7 +1156,6 @@ with total_visits as (
 		select *
 		from med_codes d join mimic_hosp.emar_detail ed
 		on d.med_code = ed.product_code
---		where d.med_code = ed.product_code
 	
 	), emar_events as (
 	
@@ -1275,15 +1180,12 @@ with total_visits as (
 		select ev.subject_id, ev.hadm_id, ev.itemid, ev.charttime, ea.active
 		from emar_events ev join emar_actions ea 
 		on ev.event_txt = ea.med_action
---		where ev.event_txt = ea.med_action 
-	
 	)
-	-- merge emar_results with mimic_core.admissions to form final result
-	select er.subject_id, er.hadm_id, er.itemid, a.admittime, er.charttime, 0 var_type, er.active as val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, a.hospital_expire_flag
-	from emar_results er join mimic_core.admissions a 
+	-- merge emar_results with mimic_derived.cohort to form final result
+	select er.subject_id, er.hadm_id, er.itemid, a.admittime, er.charttime, 0 var_type, er.active as val_num, 0 val_min, 1 val_max, 0 ref_min, 0 ref_max, 0 val_default, a.hospital_expire_flag, a.time_in, a.gap
+	from emar_results er join mimic_derived.cohort a 
 	on er.hadm_id = a.hadm_id 
-	where extract( epoch from age( er.charttime, a.admittime )) <= 172800
-	--order by er.subject_id asc, er.charttime asc, er.itemid asc ;
+	where extract( epoch from age( er.charttime, a.admittime )) <= a.icu_limit
 
 ), input_events as (
 
@@ -1294,8 +1196,8 @@ with total_visits as (
 	 *****************************************************/
 	with i_items as (
 		-- consider adding: rate, rate uom fields
-		select i.subject_id, i.hadm_id, i.itemid, a.admittime, i.starttime as charttime, (case when i.amount <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.inputevents i 
+		select i.subject_id, i.hadm_id, i.itemid, a.admittime, i.starttime as charttime, (case when i.amount <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag, a.time_in, a.gap
+		from mimic_derived.cohort a join mimic_icu.inputevents i 
 		on a.subject_id = i.subject_id
 		where i.hadm_id is not null
 		and i.itemid in (
@@ -1315,9 +1217,9 @@ with total_visits as (
 			select *
 			from visit_ids 
 		)
-		and extract( epoch from age( i.starttime, a.admittime )) between 0 and 172800
+		and extract( epoch from age( i.starttime, a.admittime )) between 0 and a.icu_limit
 	)
-	select ii.subject_id, ii.hadm_id, ii.itemid, ii.admittime, ii.charttime, v.var_type, ii.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, ii.hospital_expire_flag
+	select ii.subject_id, ii.hadm_id, ii.itemid, ii.admittime, ii.charttime, v.var_type, ii.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, ii.hospital_expire_flag, ii.time_in, ii.gap
 	from i_items ii join val_defaults v
 	on ii.itemid = v.itemid
 
@@ -1331,8 +1233,8 @@ with total_visits as (
 	with o_items as (
 	
 		-- NOTE: urine output is normal (0), we flag abnormal (1) when urine is measured and there is no appreciable output (see paper)
-		select o.subject_id, o.hadm_id, o.itemid, a.admittime, o.charttime, (case when o.value > 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.outputevents o 
+		select o.subject_id, o.hadm_id, o.itemid, a.admittime, o.charttime, (case when o.value > 0 then 0 else 1 end) as val_num, a.hospital_expire_flag, a.time_in, a.gap
+		from mimic_derived.cohort a join mimic_icu.outputevents o 
 		on a.subject_id = o.subject_id 
 		where o.hadm_id is not null
 		and o.itemid in (
@@ -1360,9 +1262,9 @@ with total_visits as (
 			-- ids of patients admitted to hospital and stayed for at least 48 hours.
 			select *
 			from visit_ids
-		) and extract( epoch from age( o.charttime, a.admittime )) between 0 and 172800
+		) and extract( epoch from age( o.charttime, a.admittime )) between 0 and a.icu_limit
 	)
-	select oo.subject_id, oo.hadm_id, oo.itemid, oo.admittime, oo.charttime, v.var_type, oo.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, oo.hospital_expire_flag
+	select oo.subject_id, oo.hadm_id, oo.itemid, oo.admittime, oo.charttime, v.var_type, oo.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, oo.hospital_expire_flag, oo.time_in, oo.gap
 	from o_items oo join val_defaults v
 	on oo.itemid = v.itemid
 
@@ -1400,8 +1302,8 @@ with total_visits as (
 
 		(
 			-- start time
-			select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.starttime as charttime, (case when p.value is null or p.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag
-			from mimic_core.admissions a join mimic_icu.procedureevents p
+			select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.starttime as charttime, (case when p.value is null or p.value <= 0 then 0 else 1 end) as val_num, a.hospital_expire_flag, a.time_in, a.gap
+			from mimic_derived.cohort a join mimic_icu.procedureevents p
 			on a.subject_id = p.subject_id 
 			where p.hadm_id is not null
 			and p.itemid in (
@@ -1413,12 +1315,12 @@ with total_visits as (
 				select *
 				from visit_ids
 			)
-			and extract( epoch from age( p.starttime, a.admittime )) between 0 and 172800
+			and extract( epoch from age( p.starttime, a.admittime )) between 0 and a.icu_limit
 			
 		) union (
 			-- end time
-			select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.endtime as charttime, 0 as val_num, a.hospital_expire_flag
-			from mimic_core.admissions a join mimic_icu.procedureevents p
+			select p.subject_id, p.hadm_id, p.itemid, a.admittime, p.endtime as charttime, 0 as val_num, a.hospital_expire_flag, a.time_in, a.gap
+			from mimic_derived.cohort a join mimic_icu.procedureevents p
 			on a.subject_id = p.subject_id 
 			where p.hadm_id is not null
 			and p.itemid in (
@@ -1431,10 +1333,10 @@ with total_visits as (
 				select *
 				from visit_ids
 			)
-			and extract( epoch from age( p.endtime, a.admittime )) between 0 and 172800
+			and extract( epoch from age( p.endtime, a.admittime )) between 0 and a.icu_limit
 		)
 	)
-	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag, r.time_in, r.gap
 	from results r join val_defaults v 
 	on r.itemid = v.itemid
 
@@ -1533,19 +1435,6 @@ with total_visits as (
 		) union ( select 10035 itemid, '' icd_code
 		)
 		
---	), hosp_events as (
---	
---		-- search hospital for cardiac examinations
---
---		select di.subject_id, di.hadm_id, ii.itemid
---		from mimic_hosp.diagnoses_icd di join icd_itemid ii
---		on di.icd_code = ii.icd_code
---		where di.hadm_id is not null 
---		and di.icd_code in ( 
---			select i.icd_code
---			from icd_itemid i
---		)
-		
 	), ed_events as (
 	
 		-- search ED for cardiac examinations
@@ -1569,17 +1458,11 @@ with total_visits as (
 		-- NOTE: ICD billing codes do not have timestamps associated with the records.
 		--       Therefore we have no idea WHEN the diagnosis was made other than the visit/stay which it occurred.
 		--		 We'll have to assume the diagnosis applies to the entire visit
---		(
---			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
---			from hosp_events c join mimic_core.admissions a
---			on c.hadm_id = a.hadm_id 
---		) union ( 
-			select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag 
-			from ed_events c join mimic_core.admissions a
-			on c.hadm_id = a.hadm_id 
---		)
+		select c.subject_id, c.hadm_id, c.itemid, a.admittime, a.hospital_expire_flag, a.time_in, a.gap
+		from ed_events c join mimic_derived.cohort a
+		on c.hadm_id = a.hadm_id 
 	)
-	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.admittime as charttime, v.var_type, 1 as val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag 
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.admittime as charttime, v.var_type, 1 as val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag, r.time_in, r.gap
 	from results r join val_defaults v
 	on r.itemid = v.itemid
 
@@ -1635,8 +1518,8 @@ with total_visits as (
 	), vitals as (
 		-- select all values of interest within first 48 hours
 	
-		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.value, c.valuenum, a.hospital_expire_flag
-		from mimic_core.admissions a join mimic_icu.chartevents c
+		select c.subject_id, c.hadm_id, c.itemid, a.admittime, c.charttime, c.value, c.valuenum, a.hospital_expire_flag, a.time_in, a.gap
+		from mimic_derived.cohort a join mimic_icu.chartevents c
 		on a.subject_id = c.subject_id 
 		where c.hadm_id is not null
 		and c.itemid in (
@@ -1645,7 +1528,24 @@ with total_visits as (
 		) and c.hadm_id in (
 			select *
 			from visit_ids
-		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and 172800
+		) and extract( epoch from age( c.charttime, a.admittime )) between 0 and a.icu_limit
+		
+	), ed_vitals as (
+	
+		with edstays as (
+		
+			-- merge cohort with edstays so hadm_id can be found in ED
+			select e.subject_id, e.hadm_id, e.stay_id, e.intime, e.outtime, c.admittime, c.dischtime, c.edregtime, c.edouttime, c.ed_limit, c.gap, c.time_in, c.hospital_expire_flag
+			from mimic_ed.edstays e join mimic_derived.cohort c
+			on e.hadm_id = c.hadm_id
+			
+		)
+		-- merge edstays with vitalsign so data can be associated with hadm_id
+		select e.subject_id, e.hadm_id, e.stay_id, e.intime, e.outtime, e.admittime, v.charttime, e.edregtime, e.edouttime, e.ed_limit, e.gap, e.time_in,
+			v.temperature, v.heartrate, v.resprate, v.o2sat, v.sbp, v.dbp, v.rhythm, e.hospital_expire_flag
+		from edstays e join mimic_ed.vitalsign v
+		on v.stay_id = e.stay_id
+		where extract( epoch from age( v.charttime, e.edregtime )) between 0 and e.ed_limit
 		
 	), c_results as ( 
 		-- shape and mold the subsets within the selection, then merge.
@@ -1653,7 +1553,7 @@ with total_visits as (
 
 		(
 			-- BiPAP, EPAP, IPAP (binary variables) Must export both 'on' and 'off' states, interpreted by flow rate.
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, (case when v.valuenum > 0 then 1 else 0 end) as val_num, v.hospital_expire_flag
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, (case when v.valuenum > 0 then 1 else 0 end) as val_num, v.hospital_expire_flag, v.time_in, v.gap
 			from vitals v
 			where v.valuenum is not null
 			and v.itemid in ( 
@@ -1671,7 +1571,7 @@ with total_visits as (
 				) union ( select 'On'  setting, 1 id
 				)
 			)		
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, cp.id as val_num, v.hospital_expire_flag
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, cp.id as val_num, v.hospital_expire_flag, v.time_in, v.gap
 			from vitals v join cpap_modes cp 
 			on v.value = cp.setting
 			and v.itemid in (
@@ -1682,7 +1582,7 @@ with total_visits as (
 	
 		) union (
 			-- Vitals and Morse/Braden scores. (continuous variables)
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, v.valuenum as val_num, v.hospital_expire_flag
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, v.valuenum as val_num, v.hospital_expire_flag, v.time_in, v.gap
 			from vitals v
 			where v.valuenum is not null 
 			and v.itemid in ( 
@@ -1707,7 +1607,7 @@ with total_visits as (
 				) union ( select 'Arouse to Stimulation' score_name, 2 score
 				)
 			)
-			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, a.score as val_num, v.hospital_expire_flag
+			select v.subject_id, v.hadm_id, v.itemid, v.admittime, v.charttime, a.score as val_num, v.hospital_expire_flag, v.time_in, v.gap
 			from vitals v join avpu_scores a
 			on v.value = a.score_name
 			where v.value is not null 
@@ -1720,20 +1620,21 @@ with total_visits as (
 		) union (
 			-- Examinations: Cardiac Rhythm and related (binary variables)
 			with cardiac_items as (
-				        ( select '3rd AV (Complete Heart Block) '                             diagnosis, 10034 itemid
-				) union ( select 'AF (Atrial Fibrillation)'                                   diagnosis, 10027 itemid
-				) union ( select 'A Flut (Atrial Flutter) '                                   diagnosis, 10028 itemid
-				) union ( select 'A Paced'                                                    diagnosis, 10026 itemid
-				) union ( select 'Asystole'                                                   diagnosis, 10033 itemid
-				) union ( select 'AV Paced'                                                   diagnosis, 10026 itemid
-				) union ( select 'JR (Junctional Rhythm)'                                     diagnosis, 10035 itemid
-				) union ( select 'SVT (Supra Ventricular Tachycardia)'                        diagnosis, 10030 itemid
-				) union ( select 'VF (Ventricular Fibrillation) '                             diagnosis, 10032 itemid
-				) union ( select 'V Paced'                                                    diagnosis, 10026 itemid
-				) union ( select 'VT (Ventricular Tachycardia) '                              diagnosis, 10031 itemid
+				(         select 'A Paced'                             diagnosis, 10026 itemid	-- Paced
+				) union ( select 'V Paced'                             diagnosis, 10026 itemid
+				) union ( select 'AV Paced'                            diagnosis, 10026 itemid
+				) union ( select 'AF (Atrial Fibrillation)'            diagnosis, 10027 itemid	-- Atrial Fibrillation
+				) union ( select 'A Flut (Atrial Flutter) '            diagnosis, 10028 itemid	-- Atrial Flutter
+																								-- Using cardiac rhythm(?)
+				) union ( select 'SVT (Supra Ventricular Tachycardia)' diagnosis, 10030 itemid	-- SupraVentricular TachyCardia (SVT)
+				) union ( select 'VT (Ventricular Tachycardia) '       diagnosis, 10031 itemid	-- Ventricular TachyCardia (VT)
+				) union ( select 'VF (Ventricular Fibrillation) '      diagnosis, 10032 itemid	-- Ventricular Fibrillation (VF)
+				) union ( select 'Asystole'                            diagnosis, 10033 itemid	-- Asystole (Cardiac arrest)
+				) union ( select '3rd AV (Complete Heart Block) '      diagnosis, 10034 itemid	-- heart block
+				) union ( select 'JR (Junctional Rhythm)'              diagnosis, 10035 itemid	-- Junctional Rhythm
 				)
 			)
-			select v.subject_id, v.hadm_id, ci.itemid, v.admittime, v.charttime, 1 as val_num, v.hospital_expire_flag
+			select v.subject_id, v.hadm_id, ci.itemid, v.admittime, v.charttime, 1 as val_num, v.hospital_expire_flag, v.time_in, v.gap
 			from vitals v join cardiac_items ci
 			on v.value = ci.diagnosis
 			where v.itemid in (
@@ -1741,10 +1642,97 @@ with total_visits as (
 				from vital_ids vi
 				where vi.grp = 4
 			)
+			
+		) union (
+			-- ED Vitals
+			(
+				-- temperature
+				select e.subject_id, e.hadm_id, 223762 itemid, e.edregtime as admittime, e.charttime, e.temperature as val_num, e.hospital_expire_flag, e.time_in, e.gap
+				from ed_vitals e
+				where e.temperature is not null
+			
+			) union (
+				-- heartrate
+				select e.subject_id, e.hadm_id, 220045 itemid, e.edregtime as admittime, e.charttime, e.heartrate as val_num, e.hospital_expire_flag, e.time_in, e.gap
+				from ed_vitals e
+				where e.heartrate is not null
+			) union (
+				-- respiratory rate
+				select e.subject_id, e.hadm_id, 220210 itemid, e.edregtime as admittime, e.charttime, e.resprate as val_num, e.hospital_expire_flag, e.time_in, e.gap
+				from ed_vitals e
+				where e.resprate is not null
+			
+			) union (
+				-- O2 saturation rate
+				select e.subject_id, e.hadm_id, 220277 itemid, e.edregtime as admittime, e.charttime, e.o2sat as val_num, e.hospital_expire_flag, e.time_in, e.gap
+				from ed_vitals e
+				where e.o2sat is not null
+			) union (
+				-- sbp
+				select e.subject_id, e.hadm_id, 220179 itemid, e.edregtime as admittime, e.charttime, e.sbp as val_num, e.hospital_expire_flag, e.time_in, e.gap
+				from ed_vitals e
+				where e.sbp is not null
+				
+			) union (
+				-- dbp
+				select e.subject_id, e.hadm_id, 220180 itemid, e.edregtime as admittime, e.charttime, e.dbp as val_num, e.hospital_expire_flag, e.time_in, e.gap
+				from ed_vitals e
+				where e.dbp is not null
+			
+			) union (
+
+				-- cardiac rhythm
+				(
+					-- junctional rhythm
+					select e.subject_id, e.hadm_id, 10026 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%pace%'	
+				) union (
+					-- Atrial Fibrillation
+					select e.subject_id, e.hadm_id, 10027 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%(afib|atrial fib)%'	
+				) union (
+					-- Atrial Flutter
+					select e.subject_id, e.hadm_id, 10028 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%flut%'	
+				) union (
+					-- Atrial Flutter
+					select e.subject_id, e.hadm_id, 10030 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%svt%'
+				) union (
+					-- Ventricular TachyCardia
+					select e.subject_id, e.hadm_id, 10031 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%ventricular tachycardia%'
+				) union (
+					-- Ventricular Fibrillation
+					select e.subject_id, e.hadm_id, 10032 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%ventricular fibrillation%'
+				) union (
+					-- Asystole
+					select e.subject_id, e.hadm_id, 10033 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%asystole%'
+				) union (
+					-- Heart block
+					select e.subject_id, e.hadm_id, 10034 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%block%'
+				) union (		
+					-- junctional rhythm
+					select e.subject_id, e.hadm_id, 10035 itemid, e.edregtime as admittime, e.charttime, 1 as val_num, e.hospital_expire_flag, e.time_in, e.gap
+					from ed_vitals e
+					where lower( e.rhythm ) similar to '%junctional%'
+				)
+			)
 		)
 	)
 	-- merge with val_defaults to inherit variable definition
-	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag
+	select r.subject_id, r.hadm_id, r.itemid, r.admittime, r.charttime, v.var_type, r.val_num, v.val_min, v.val_max, v.ref_min, v.ref_max, v.val_default, r.hospital_expire_flag, r.time_in, r.gap
 	from c_results r join val_defaults v 
 	on r.itemid = v.itemid
 	
@@ -1753,7 +1741,8 @@ with total_visits as (
 	 * MERGE subquery results
 	 *********************************/
 	(
-		select pid as subject_id, rid as hadm_id, itemid, cast( '1000-01-01 00:00:00.000' as timestamp ) as admittime, cast( '1000-01-01 00:00:00.000' as timestamp ) as charttime, var_type, val_num, val_min, val_max, ref_min, ref_max, val_default, 0 as hospital_expire_flag
+		select pid as subject_id, rid as hadm_id, itemid, cast( '1000-01-01 00:00:00.000' as timestamp ) as admittime, cast( '1000-01-01 00:00:00.000' as timestamp ) as charttime, var_type, val_num, val_min, val_max, ref_min, ref_max, val_default, 0 as hospital_expire_flag,
+			cast( '1000-01-01 00:00:00.000' as timestamp ) as time_in, 0 as gap
 		from val_defaults
 	) union (
 		select *
@@ -1788,7 +1777,7 @@ with total_visits as (
 select r.subject_id as patient_id, 
 	r.hadm_id  as visit_id, 
 	r.itemid   as event_id,
-	cast( (extract( epoch from age( r.charttime, r.admittime )) /  3600) as INT ) as "hour",
+	cast( ((extract( epoch from age( r.charttime, r.time_in )) - r.gap ) / 3600) as INT) as "hour",
 	r.var_type as var_type,
 	r.val_num  as val_num,
 	r.val_min  as val_min,
@@ -1800,4 +1789,3 @@ select r.subject_id as patient_id,
 from results r join val_defaults v 
 on r.itemid = v.itemid
 order by subject_id asc, charttime asc, hadm_id asc;
-

@@ -7,11 +7,11 @@
  * variable used over the visit, then summed for the final score for the patient.
  * Each visit is treated separately.
  ******************************************/
+
 with visit_ids as(
 
-	select distinct a.hadm_id
-	from mimic_core.admissions a 
-	where extract( epoch from age( a.dischtime, a.admittime )) >= 172800
+	select distinct c.hadm_id
+	from mimic_derived.cohort c 
 	
 ), mews_data as (
 
@@ -196,12 +196,25 @@ with visit_ids as(
 	from mews_max m
 	group by m.hadm_id
 	
+), final_results as (
+	-- merge results into full patient cohort
+	(
+		-- scored visits
+		select a.subject_id, r.hadm_id, r.score
+		from mews_results r join mimic_core.admissions a 
+		on r.hadm_id = a.hadm_id
+	) UNION (
+		-- unscored visits
+		SELECT a.subject_id, a.hadm_id, 0 AS score
+		FROM mimic_core.admissions a
+		WHERE a.hadm_id NOT IN (
+			SELECT m.hadm_id
+			FROM mews_results m
+		)
+	)
 )
--- final results
-select a.subject_id as patient_id, r.hadm_id as visit_id, r.score as mews_score, (case when r.score >= 4 then 1 else 0 end) as mews_warning, a.hospital_expire_flag as died
-from mews_results r join mimic_core.admissions a 
+SELECT a.subject_id as patient_id, r.hadm_id as visit_id, r.score as mews_score, (case when r.score >= 4 then 1 else 0 end) as mews_warning, a.hospital_expire_flag as died
+FROM final_results r join mimic_core.admissions a
 on r.hadm_id = a.hadm_id
-order by a.subject_id asc, a.admittime asc;
-
-
+ORDER BY r.subject_id ASC, r.hadm_id ASC;
 
