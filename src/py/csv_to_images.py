@@ -8,7 +8,6 @@ import common
 import numpy as np
 import cv2
 import time
-import clinical_scores
 
 # Optional suffix for output image name, use for debugging.
 OUT_IMG_SUFFIX = ''
@@ -125,15 +124,9 @@ def process_batch_images_and_clinical_scores( patient_visits, stats, item2featur
     generate_images( patient_visits )
     print("Image generation took {:.2f} sec".format( time.time() - gen_start_time) )
 
-    # Tally braden/sofa
+    # Tally braden/morse
     tally_clinical_scores( patient_visits, stats, item2feature )
 
-    # Compute MEWS/SOFA
-    print("Computing clinical scores")
-    clinical_scores_start_time = time.time()
-    clinical_scores.compute_mews( patient_visits, stats )
-    clinical_scores.compute_sofa( patient_visits, stats )
-    print("Clinical scores took {:.2f} sec".format( time.time() - clinical_scores_start_time) )
 
 def generate_stats():
     """
@@ -203,19 +196,6 @@ def record_clinical_score_component(itemid, val_num, hour, visit, item2feature):
 
     if itemid in common.morse_item2row:
         visit.morse[ common.morse_item2row[itemid], hour ] = val_num
-
-    feature_id = item2feature[itemid]
-    if feature_id in common.mews_featureids:
-        # Do a reverse lookup. Slow :(
-        for i in range( len(common.mews_featureids) ):
-            if common.mews_featureids[i] == feature_id:
-                visit.mews[i, hour:] = val_num
-
-    if feature_id in common.sofa_featureids:
-        # Do a reverse lookup. Slow :(
-        for i in range(len( common.sofa_featureids) ):
-            if common.sofa_featureids[i] == feature_id:
-                visit.sofa[i, hour:] = val_num
 
 
 def tally_clinical_scores( patient_visits, stats, item2feature ):
@@ -287,47 +267,15 @@ def handle_special_itemid(itemid, val_num, visit, stats, item2feature):
     Handles itemids that have special meanings. Often involves directly updating
     the image for the given patient. 
     """
-    featureid = item2feature[itemid]
-    if  (itemid == common.Special_itemids.AGE)          or \
-        (itemid == common.Special_itemids.SEX)          or \
-        (itemid == common.Special_itemids.ETHNICITY)    or \
-        (itemid == common.Special_itemids.PRIOR_CA)     or \
-        (itemid == common.Special_itemids.PRIOR_ADMIT):
-        # Assign val_num to entire row in image
-        visit.img[itemid, :] = common.normalize(
-            stats,
-            val_num,
-            stats[featureid, common.Stats_col.REF_MIN],
-            stats[featureid, common.Stats_col.REF_MAX],
-            featureid,
-            stats[featureid, common.Stats_col.VAR_TYPE],
-            common.NORM_METHOD
-        )
+
     if itemid == common.Special_itemids.ADMIT_HOUR:
         hour_reel = np.mod(np.arange(visit.img.shape[1]), 24)
         hour_reel = np.roll(hour_reel, int(-val_num))
         hour_reel = (hour_reel / 23.0) * common.NORM_OUT_MAX
         visit.img[itemid, :] = hour_reel
 
-    # if itemid == common.Special_itemids.LOC_SEVERITY:
-        # Handle this implicitly as CONTINUOUS_WITH_REF
 
-def compute_hour_diff(charttime: datetime, admittime: datetime) -> int:
-    """
-    Computes the difference in hours between charttime and admittime.
-    Drops minutes and seconds info, so e.g. (2:59 - 1:00) = 1
-    """
-    # Clear minute and second and microsecond info
-    charttime = charttime.replace(minute=0, second=0, microsecond=0)
-    admittime = admittime.replace(minute=0, second=0, microsecond=0)
 
-    # Compute the number of hours between the two times
-    diff = int((charttime - admittime).total_seconds() / 3600)
-
-    # Verify that the number of hours falls in our allowable range
-    assert diff >= 0
-
-    return diff
 
 def generate_images(patient_visits: dict):
     """

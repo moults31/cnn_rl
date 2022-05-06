@@ -1,6 +1,7 @@
 # Use this file to store common constants and classes to be used throughout this repo.
 
 from enum import Enum, IntEnum
+from pickle import TRUE
 import numpy as np
 import pandas as pd
 import os
@@ -36,6 +37,11 @@ CSV_PARSER_PATIENTID_MIN      = 10000019   # 12817000
 CSV_PARSER_PATIENTID_MAX      = 19999987   # 12857000
 # CSV_PARSER_PATIENTID_MAX    = 13217000
 
+# Prediction thresholds for clinical scores
+MEWS_THRESHOLD = 2.9
+SOFA_SCORE_THRESHOLD = 5.2
+SOFA_EST_THRESHOLD = 10.0
+
 # Data split percentages (train will take up remainder)
 TEST_SPLIT_PCT = 0.2
 VAL_SPLIT_PCT  = 0.3
@@ -43,7 +49,7 @@ VAL_SPLIT_PCT  = 0.3
 # Constants as specified in the paper
 N_HOURS = 48
 N_COLS  = N_HOURS
-N_ROWS  = 150
+N_ROWS  = 120
 
 # Normalization output range. Selected as [0,255] for openCV compatibility
 NORM_OUT_MIN = 0
@@ -86,66 +92,25 @@ MORSE_ROWID = 107
 
 # Used for indexing columns by name in stats
 class Special_itemids(IntEnum):
-    AGE         = 0   # 0 = patient age, continuous
-    SEX         = 1   # 1 = sex, binary (0=male, 1=female/other)
-    ETHNICITY   = 2   # 2 = race/ethnicity, binary (0=black, 1=other)
-    PRIOR_CA    = 3   # 3 = prior cardiac arrest history, binary.  Currently only showing cardiac 
-                      # arrest experienced in the ICU.  Cardiac arrest from prior visits or in the 
-                      # main hospital is a huge task to track down.
-    PRIOR_ADMIT = 4   # 4 = prior admissions in past 90 days, binary
-    ADMIT_HOUR  = 5   # 5 = hour of day, continuous.  NOTE: Needs special handling as the hour 
+    ADMIT_HOUR  = 0   # hour of day, continuous.  NOTE: Needs special handling as the hour 
                       # represents the hour of day in military time at time of admission.  
                       # This value must be incremented across the entire timeline by the hour, 
                       # and rewind to 0 if hour = 24.  range = [0...23] but must be normalized to [0...1].
-                      
-#  LOC_SEVERITY = 6   # 6 = location within hospital, continuous with ref range.  In the paper, 
-                      # this variable indicates where the patient was located within the hospital 
-                      # (ICU vs. Emergency room, vs. ...).  However, the hospital location in the 
-                      # mimic data doesn't carry the same meaning as all the labels I could find 
-                      # more or less mixed/matched location with purpose for admission to the hospital 
-                      # making this task nearly impossible.  Therefore, I converted this variable 
-                      # to a health care urgency rating with 0 meaning normal and 9 meaning dire emergency.  
-                      # The ratings are pulled directly from the admissions table. 
 
-# Used for indexing rows in patient_visit mews structure
+# Header info for MEWS csv
 class MEWS_rows(IntEnum):
-    RESPIRATORY_RATE = 0
-    HEART_RATE       = 1
-    SYSTOLIC         = 2
-    AVPU             = 3
-    TEMPERATURE      = 4
-    HOURLY_URINE     = 5
-    N_ROWS           = 6
+    PATIENT_ID      = 0
+    VISIT_ID        = 1
+    MEWS_SCORE      = 2
+    MEWS_WARNING    = 3
+    DIED            = 4
 
-# Used for mapping rows in patient_visit mews structure to featureids
-mews_featureids = [
-    9, 8, 10, 14, 7, 115
-]
-
-# Used for indexing rows in patient_visit mews structure
-class SOFA_raw_rows( IntEnum ):
-    PAO2        = 0
-    FIO2        = 1
-    PLATELETS   = 2
-    BILIRUBIN   = 3
-    HYPOTENSION = 4
-    GCS         = 5
-    CREATININE  = 6
-    N_ROWS      = 7
-
-class SOFA_processed_rows(IntEnum):
-    RESPIRATION    = 0
-    COAGULATION    = 1
-    LIVER          = 2
-    CARDIOVASCULAR = 3
-    CNS            = 4
-    RENAL          = 5
-    N_ROWS         = 6
-
-# Used for mapping rows in patient_visit mews structure to featureids
-sofa_featureids = [
-    42, 13, 32, 27, -1, -1, 22
-]
+class SOFA_rows(IntEnum):
+    PATIENT_ID      = 0
+    VISIT_ID        = 1
+    SOFA_SCORE      = 2
+    EST_MORTALITY   = 3
+    DIED            = 4
 
 # Used for indexing columns by name in stats
 class Stats_col( IntEnum ):
@@ -231,9 +196,6 @@ def normalize(
     """
     assert method in Norm_method
 
-    if item_id is not None:
-        valuenum = apply_specific_transforms(valuenum, item_id)
-
     val_normalized = None
 
     if ( method == Norm_method.MINMAX ):
@@ -265,14 +227,6 @@ def normalize(
     elif method == Norm_method.CUSTOM:
         raise NotImplementedError
 
-def apply_specific_transforms(valuenum: float, itemid: int) -> float:
-    """
-    Applies specific transforms based on medical data associated 
-    with given itemids. Configured based on clinical_variables.ods.
-    """
-
-    return valuenum
-
 
 def dump_outputs(y_pred, y_true):
     """
@@ -303,7 +257,7 @@ def evaluate_predictions( truth, preds, score=None, average='binary' ):
 
 def get_split_as_string(i, n):
     test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
-    val_start_idx  = n * ( 1 - TEST_SPLIT_PCT )
+    val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
 
     if i >= test_start_idx and i < val_start_idx:
         return 'test'
@@ -311,4 +265,3 @@ def get_split_as_string(i, n):
         return 'val'
     else:
         return 'train'
-        
