@@ -14,13 +14,14 @@ class CNN_RL(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
         super(CNN_RL, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=4)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=6)
-        self.pool = nn.MaxPool2d(kernel_size=(2, 2))
-        self.dropout1 = nn.Dropout(p=0.25)
-        self.convLSTM = convLSTM.ConvLSTM(input_dim=64, hidden_dim=8, kernel_size=(3,3), num_layers=1, batch_first=True, bias=True, return_all_layers=True)
-        self.fc1 = nn.Linear(in_features=11360, out_features=2)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=4) 
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=64, kernel_size=6) 
+        self.pool = nn.MaxPool2d(kernel_size=(16, 16)) 
+        self.dropout1 = nn.Dropout(p=0.25) 
+        self.convLSTM = convLSTM.ConvLSTM(input_dim=64, hidden_dim=8, kernel_size=(11,11), num_layers=1, batch_first=True, bias=False, return_all_layers=False) 
+        self.fc1 = nn.Linear(in_features=128, out_features=2) 
         self.dropout2 = nn.Dropout(p=0.25)
+
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -103,7 +104,7 @@ def train_cnn_rl(model, train_dataloader, n_epoch=common.N_EPOCH):
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 42.0
+    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 300.0
     print(f"Class weight ratio: {class_weight_ratio}")
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(common.device)
@@ -113,7 +114,7 @@ def train_cnn_rl(model, train_dataloader, n_epoch=common.N_EPOCH):
     optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-3)
 
     # Assign decay 1e-6 as per the paper
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=range(n_epoch), gamma=1e-6)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=range(n_epoch), gamma=1e-6)
     model.train() # prep model for training
 
     train_start_time = time.time()
@@ -134,7 +135,7 @@ def train_cnn_rl(model, train_dataloader, n_epoch=common.N_EPOCH):
             loss = criterion(outputs, target)
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
 
             curr_epoch_loss.append(loss.cpu().data.numpy())
 
