@@ -7,13 +7,11 @@
  * variable used over the visit, then summed for the final score for the patient.
  * Each visit is treated separately.
  ******************************************/
-SET search_path TO mimic_iv;
 
 with visit_ids as(
 
-	select distinct a.hadm_id
-	from mimic_core.admissions a 
-	where extract( epoch from age( a.dischtime, a.admittime )) >= 172800
+	select distinct c.hadm_id
+	from mimic_derived.cohort c 
 	
 ), mews_data as (
 

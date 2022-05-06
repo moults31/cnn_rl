@@ -9,9 +9,8 @@
  ******************************************/
 with visit_ids as(
 
-	select distinct a.hadm_id
-	from mimic_core.admissions a 
-	where extract( epoch from age( a.dischtime, a.admittime )) >= 172800
+	select c.hadm_id
+	from mimic_derived.cohort c
 	
 ), est_mortality as (
 	
