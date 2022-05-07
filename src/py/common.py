@@ -265,24 +265,42 @@ def dump_outputs(y_pred, y_true):
             out_writer.writerow(line)
 
 def evaluate_predictions( truth, preds, score=None, average='binary' ):
+
     # Evaluate the scores' predictions against the ground truth
-    acc = accuracy_score( truth, preds )
+    acc        = accuracy_score( truth, preds )
     p, r, f, _ = precision_recall_fscore_support( truth, preds, average=average )
 
     if score is not None:
         auc = roc_auc_score( truth, score )
 
+    """
     print( ("Accuracy: " + str(acc)) )
     if score is not None:
         print( ("AUC: " + str(auc)) )
     print( f"Precision {p}")
     print( f"Recall {r}"   )
     print( f"FScore {f}"   )
+    """
 
     if score is not None:
-        return auc
+        return auc, acc, p, r, f
     else:
-        return 0.0
+        return 0.0, acc, p, r, f
+        
+def print_output_header():
+
+    print( "\nepoch  Time  loss             Accuracy    AUC         Precision   Recall      F1-Score       Accuracy    AUC         Precision   Recall      F1-Score" )
+        
+def print_epoch_output( epoch, etime, loss, acc, auc, p, r, f, acc2, auc2, p2, r2, f2 ):
+
+    print( "\rep %02d: %.02f %.12f   %.9f %.9f %.9f %.9f %.9f    %.9f %.9f %.9f %.9f %.9f" % ( epoch, etime, loss, acc, auc, p, r, f, acc2, auc2, p2, r2, f2 ) )
+    #output = "\rep_{0}: {11:.2f} {12:.12f} | {1:.12f} {2:.12f} {3:.12f} {4:.12f} {5:.12f} | {6:.12f} {7:.12f} {8:.12f} {9:.12f} {10:.12f}"   
+    #print( output.format( epoch, acc, auc, p, r, f, acc2, auc2, p2, r2, f2, epoch_time, curr_epoch_loss ) )
+
+def print_scores( label, acc, auc, p, r, f ):
+
+    print( "%8s %-18s %-18s %-18s %-18s %-18s" % ( " ", "Accuracy", "AUC", "Precision", "Recall", "F1-Score" ) )
+    print( "%7s: %.16f %.16f %.16f %.16f %.16f" % ( label, acc, auc, p, r, f ) )
 
 def get_split_as_string(i, n):
     test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
