@@ -52,7 +52,7 @@ def parse_csv_to_images( csv_file: str ):
                     break
 
             # If the hour is out of the range we care about, skip this row
-            if hour >= 48:
+            if hour >= common.N_HOURS:
                 continue
 
             # If we don't have a row mapping for this itemid, note that down
@@ -76,7 +76,7 @@ def parse_csv_to_images( csv_file: str ):
                 # Otherwise, normalize valuenum
                 valuenum_norm = common.normalize( stats, val_num, ref_min, ref_max, feature_id, var_type, common.NORM_METHOD, itemid )
 
-                if var_type == 4:       # <-- NOTE: need to update so it isn't hard-coded like this
+                if var_type == common.Var_type.BINARY_POINT:
                     # Write valuenum to specified hour without carry-over
                     subject.img[feature_id, hour] = valuenum_norm
                 else:
