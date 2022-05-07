@@ -29,7 +29,7 @@ EVAL_EVERY_EPOCH = True
 MAPPING_PATIENT_ID = 0
 
 # Optional forced seed for split generation
-USE_SPLITS_SEED = False
+USE_SPLITS_SEED = True
 SPLITS_SEED = 0
 
 # Batch size for number of input csv rows to parse before dumping images and deleting runtime image representations
