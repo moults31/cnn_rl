@@ -14,14 +14,20 @@ class CNN_RL(nn.Module):
     def __init__(self):
         # Layer architecture taken from S2 Table in the paper
         super(CNN_RL, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=4) 
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=64, kernel_size=6) 
-        self.pool = nn.MaxPool2d(kernel_size=(16, 16)) 
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(120,1))
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(1,1))
+        self.pool = nn.MaxPool2d(kernel_size=(1, 4)) 
         self.dropout1 = nn.Dropout(p=0.25) 
-        self.convLSTM = convLSTM.ConvLSTM(input_dim=64, hidden_dim=8, kernel_size=(11,11), num_layers=1, batch_first=True, bias=False, return_all_layers=False) 
-        self.fc1 = nn.Linear(in_features=128, out_features=2) 
+        self.convLSTM = convLSTM.ConvLSTM(input_dim=64, hidden_dim=8, kernel_size=(1,5), num_layers=1, batch_first=True, bias=False, return_all_layers=False) 
+        self.fc1 = nn.Linear(in_features=96, out_features=2) 
         self.dropout2 = nn.Dropout(p=0.25)
 
+        # self.conv1    = nn.Conv2d( in_channels=1,  out_channels=32, kernel_size=(120,1) )
+        # self.conv2    = nn.Conv2d( in_channels=32, out_channels=32, kernel_size=(1,1) )
+        # self.pool     = nn.MaxPool2d( kernel_size=(1, 3) )
+        # self.dropout1 = nn.Dropout(p=0.25)
+        # self.fc1      = nn.Linear( in_features=512, out_features=2 )
+        # self.dropout2 = nn.Dropout( 0.5 )
 
     def forward(self, x):
         x = F.relu(self.conv1(x))

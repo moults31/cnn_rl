@@ -8,27 +8,26 @@ import torch.nn.functional as F
 import time
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-
-class StandardCNN(nn.Module):
-    def __init__(self):
+class StandardCNN( nn.Module ):
+    def __init__( self ):
         # Layer architecture taken from S2 Table in the paper
-        super(StandardCNN, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=16)
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=64, kernel_size=16)
-        self.pool = nn.MaxPool2d(kernel_size=(16, 16))
+        super( StandardCNN, self ).__init__()
+        self.conv1    = nn.Conv2d( in_channels=1,  out_channels=32, kernel_size=(120,1) )
+        self.conv2    = nn.Conv2d( in_channels=32, out_channels=32, kernel_size=(1,1) )
+        self.pool     = nn.MaxPool2d( kernel_size=(1, 3) )
         self.dropout1 = nn.Dropout(p=0.25)
-        self.fc1 = nn.Linear(in_features=448, out_features=2)
-        self.dropout2 = nn.Dropout(0.5)
+        self.fc1      = nn.Linear( in_features=512, out_features=2 )
+        self.dropout2 = nn.Dropout( 0.5 )
 
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+    def forward( self, x ):
+        x = F.relu( self.conv1(x) )
+        x = F.relu( self.conv2(x) )       
         x = self.pool(x)
         x = self.dropout1(x)
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = torch.flatten(x, 1)    # flatten all dimensions except batch
         x = self.fc1(x)
         x = self.dropout2(x)
-        x = F.softmax(x)
+        x = F.softmax( x, dim=1 )
         return x
 
 def main(n_epoch=common.N_EPOCH):
@@ -97,7 +96,7 @@ def train_cnn(model, train_dataloader, n_epoch=common.N_EPOCH):
     """
     # Assign class weights and create 2-class criterion
     # class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 13.78
-    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 275.0
+    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 30.0
     print(f"Class weight ratio: {class_weight_ratio}")
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
     class_weights = torch.FloatTensor(weights).to(common.device)

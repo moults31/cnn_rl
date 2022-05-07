@@ -17,7 +17,7 @@ class StandardRNN(nn.Module):
         self.dropout1 = nn.Dropout(p=0.2)
         self.lstm2 = nn.LSTM(input_size=128, hidden_size=128, batch_first=True)
         self.dropout2 = nn.Dropout(p=0.1)
-        self.fc1 = nn.Linear(in_features=19200, out_features=2)
+        self.fc1 = nn.Linear(in_features=15360, out_features=2)
         self.dropout3 = nn.Dropout(p=0.2)
 
     def forward(self, x):

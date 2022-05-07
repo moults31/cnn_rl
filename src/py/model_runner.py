@@ -1,5 +1,4 @@
 from xml.etree.ElementInclude import include
-import clinical_scores
 import cnn
 import cnn_rl
 import rnn
@@ -10,11 +9,6 @@ def main():
     Main function.
     Runs all models with default settings.
     """
-    # print("###############################")
-    # print("Running MEWS/SOFA")
-    # clinical_scores.main()
-    # print("###############################\n")
-
     print("###############################")
     print("Running CNN")
     cnn.main()
