@@ -15,27 +15,27 @@ def run_tutorial():
     Copied directly from https://pytorch.org/hub/pytorch_vision_inception_v3
     """
     # Create and train the model
-    model = torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True)
+    model = torch.hub.load( 'pytorch/vision:v0.10.0', 'inception_v3', pretrained=True )
     model.eval()
 
     # Download an example image from the pytorch website
     import urllib
-    url, filename = ("https://github.com/pytorch/hub/raw/master/images/dog.jpg", "dog.jpg")
-    try: urllib.URLopener().retrieve(url, filename)
-    except: urllib.request.urlretrieve(url, filename)
+    url, filename = ( "https://github.com/pytorch/hub/raw/master/images/dog.jpg", "dog.jpg" )
+    try:    urllib.URLopener().retrieve( url, filename )
+    except: urllib.request.urlretrieve( url, filename )
 
     # sample execution (requires torchvision)
     from PIL import Image
     from torchvision import transforms
-    input_image = Image.open(filename)
+    input_image = Image.open( filename )
     preprocess = transforms.Compose([
-        transforms.Resize(299),
-        transforms.CenterCrop(299),
+        transforms.Resize( 299 ),
+        transforms.CenterCrop( 299 ),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize( mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] ),
     ])
-    input_tensor = preprocess(input_image)
-    input_batch = input_tensor.unsqueeze(0) # create a mini-batch as expected by the model
+    input_tensor = preprocess( input_image )
+    input_batch  = input_tensor.unsqueeze(0) # create a mini-batch as expected by the model
 
     # move the input and model to GPU for speed if available
     if torch.cuda.is_available():
@@ -43,12 +43,12 @@ def run_tutorial():
         model.to('cuda')
 
     with torch.no_grad():
-        output = model(input_batch)
+        output = model( input_batch )
     # Tensor of shape 1000, with confidence scores over Imagenet's 1000 classes
-    print(output[0])
+    print( output[0] )
     # The output has unnormalized scores. To get probabilities, you can run a softmax on it.
     probabilities = torch.nn.functional.softmax(output[0], dim=0)
-    print(probabilities)
+    print( probabilities )
 
     # Download ImageNet labels
     os.system('wget https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt') 
@@ -67,31 +67,32 @@ def main(n_epoch=common.N_EPOCH):
     Creates a model, trains it, and evaluates it against test set and val set.
     Adapted from https://pytorch.org/hub/pytorch_vision_inception_v3
     """
-    print(f"Running on CUDA common.device: {common.device}")
+    print( f"Running on CUDA common.device: {common.device}" )
 
     # Load images and labels for each split
-    train_loader, test_loader, val_loader = common.load_data(batch_size=16)
+    train_loader, test_loader, val_loader = common.load_data( batch_size=16 )
 
     # Create and train the model
-    model = models.Inception3(num_classes=2)
-    model.to(common.device)
+    model = models.Inception3( num_classes=2 )
+    model.to( common.device )
 
     train_inceptionv3(model, train_loader, n_epoch)
 
     # Evaluate the model's predictions against the ground truth
     with torch.no_grad():
-        y_score_test, y_pred_test, y_test = eval_model(model, test_loader)
-        y_score_val, y_pred_val, y_val = eval_model(model, val_loader)
+        y_score_test, y_pred_test, y_test = eval_model( model, test_loader )
+        y_score_val,  y_pred_val,  y_val  = eval_model( model, val_loader  )
 
     # Evaluate the scores' predictions against the ground truth
-    print("\nScores from test split:")
-    common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
-    print("\nScores from val split:")
-    common.evaluate_predictions(y_val, y_pred_val, score=y_score_val)
+
+    auc, acc, p, r, f = common.evaluate_predictions( y_test, y_pred_test, score=y_score_test )
+    common.print_scores( "test", acc, auc, p, r, f )   
+    auc, acc, p, r, f = common.evaluate_predictions( y_val, y_pred_val, score=y_score_val )
+    common.print_scores( "val", acc, auc, p, r, f )
 
     common.dump_outputs(y_pred_val, y_val)
 
-def eval_model(model, dataloader):
+def eval_model( model, dataloader ):
     """
     :return:
         Y_pred_test: prediction of model on the test dataloder.
@@ -102,38 +103,40 @@ def eval_model(model, dataloader):
         Y_val: truth labels for the val set. Should be an numpy array of ints
     """
     model.eval()
+    
     Y_score = torch.FloatTensor()
-    Y_pred = []
-    Y_true = []
-    i = 0
+    Y_pred  = []
+    Y_true  = []
+    i       = 0
+    
     for data, target in dataloader:
         # Manipulate image to shape [batch, 3, 299, 299] that Inceptionv3 expects
-        data = data.expand(data.shape[0], 3, data.shape[2], data.shape[3])
-        preprocess = transforms.Compose([
-            transforms.Resize(299),
-        ])
-        data = preprocess(data)
-        data = data.to(common.device)
-        outputs = model(data)
-        _, predictions = torch.max(outputs, 1)
-        predictions = predictions.to('cpu')
-        y_hat = outputs[:,1]
+        data           = data.expand( data.shape[0], 3, data.shape[2], data.shape[3] )
+        preprocess     = transforms.Compose([
+                            transforms.Resize(299),
+                        ])
+        data           = preprocess( data )
+        data           = data.to( common.device )
+        outputs        = model( data )
+        _, predictions = torch.max( outputs, 1 )
+        predictions    = predictions.to( 'cpu' )
+        y_hat          = outputs[:,1]
 
-        Y_score = np.concatenate((Y_score, y_hat.to('cpu').detach().numpy()), axis=0)
-        Y_pred.append(predictions)
-        Y_true.append(target)
+        Y_score = np.concatenate( (Y_score, y_hat.to('cpu').detach().numpy() ), axis=0 )
+        Y_pred.append( predictions )
+        Y_true.append( target      )
 
         # Print progress indicator
         if (i % 100) == 0:
             print('.', end='', flush=True)
         i = i + 1
 
-    Y_pred = np.concatenate(Y_pred, axis=0)
-    Y_true = np.concatenate(Y_true, axis=0)
+    Y_pred = np.concatenate( Y_pred, axis=0 )
+    Y_true = np.concatenate( Y_true, axis=0 )
 
     return Y_score, Y_pred, Y_true
 
-def train_inceptionv3(model, train_dataloader, n_epoch=common.N_EPOCH):
+def train_inceptionv3( model, train_dataloader, n_epoch=common.N_EPOCH ):
     """
     :param model: An Inceptionv3 model
     :param train_dataloader: the DataLoader of the training data
@@ -141,46 +144,55 @@ def train_inceptionv3(model, train_dataloader, n_epoch=common.N_EPOCH):
     :return:
         model: trained model
     """
+    learn_rate = 5e-2
+    
     # Assign class weights and create 2-class criterion
     class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 20.0
-    print(f"Class weight ratio: {class_weight_ratio}")
-    weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
-    class_weights = torch.FloatTensor(weights).to(common.device)
-    criterion = torch.nn.modules.loss.CrossEntropyLoss(weight=class_weights)
+    
+    print( f"     Number epochs: {n_epoch}"    )  
+    print( f"     Learning rate: {learn_rate}" )   
+    print( f"Class weight ratio: {class_weight_ratio}" )
+    common.print_output_header()
+    
+    weights       = [1.0 / class_weight_ratio, 1.0 - (1.0 / class_weight_ratio) ]
+    class_weights = torch.FloatTensor( weights ).to( common.device )
+    criterion     = torch.nn.modules.loss.CrossEntropyLoss( weight=class_weights )
 
     # Assign LR=1e-3 taken from the paper
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=5e-2)
+    optimizer = torch.optim.RMSprop( model.parameters(), lr=learn_rate )
 
     model.train() # prep model for training
 
     train_start_time = time.time()
+    
     for epoch in range(n_epoch):
-        print(f"##### EPOCH {epoch} START #####")
-        curr_epoch_loss = []
+
+        curr_epoch_loss  = []
         epoch_start_time = time.time()
-        i = 0
+        i                = 0
+        
         for data, target in train_dataloader:
             # Transfer tensors to GPU
-            data, target = data.to(common.device), target.to(common.device)
+            data, target = data.to( common.device ), target.to( common.device )
 
             # Manipulate image to shape [batch, 3, 299, 299] that Inceptionv3 expects
-            data = data.expand(data.shape[0], 3, data.shape[2], data.shape[3])
+            data       = data.expand( data.shape[0], 3, data.shape[2], data.shape[3] )
             preprocess = transforms.Compose([
-                transforms.Resize(299),
-            ])
+                            transforms.Resize(299),
+                         ])
             data = preprocess(data)
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
-            data = data.to(common.device)
+            data                = data.to( common.device )
             outputs, aux_output = model(data)
-            loss = criterion(outputs, target)
+            loss                = criterion( outputs, target )
             loss.backward()
             optimizer.step()
 
-            curr_epoch_loss.append(loss.cpu().data.numpy())
+            curr_epoch_loss.append( loss.cpu().data.numpy() )
 
             # Print progress indicator
             if (i % 100) == 0:
@@ -192,7 +204,7 @@ def train_inceptionv3(model, train_dataloader, n_epoch=common.N_EPOCH):
 
         # Optionally make predictions and evaluate between every epoch.
         # Adds a lot of time, but is worth it to get intermediate readouts when training epochs are very slow
-        if(common.EVAL_EVERY_EPOCH):
+        if ( common.EVAL_EVERY_EPOCH ):
             with torch.no_grad():
                 # Put model in eval mode temporarily
                 model.eval()
@@ -200,14 +212,15 @@ def train_inceptionv3(model, train_dataloader, n_epoch=common.N_EPOCH):
                 # Get entire dataloader
                 _, test_loader, val_loader = common.load_data(batch_size=16)
                 # Evaluate the model's predictions against the ground truth
-                y_score_test, y_pred_test, y_test = eval_model(model, test_loader)
-                y_score_val, y_pred_val, y_val = eval_model(model, val_loader)
+                y_score_test, y_pred_test, y_test = eval_model( model, test_loader )
+                y_score_val,  y_pred_val,  y_val  = eval_model( model, val_loader  )
 
                 # Evaluate the scores' predictions against the ground truth
-                print("\nScores from test split:")
-                auc = common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
-                print("\nScores from val split:")
-                common.evaluate_predictions(y_val, y_pred_val, score=y_score_val)
+                auc,  acc,  p,  r,  f  = common.evaluate_predictions( y_test, y_pred_test, score=y_score_test )
+                auc2, acc2, p2, r2, f2 = common.evaluate_predictions( y_val,  y_pred_val,  score=y_score_val  )
+
+                common.print_epoch_output( epoch+1, epoch_time, curr_epoch_loss, acc, auc, p, r, f, acc2, auc2, p2, r2, f2 )
+
 
                 # Stop early if we hit our target
                 if common.DO_EARLY_STOPPING and auc >= common.TARGET_AUC_INCEPTION:
@@ -216,9 +229,7 @@ def train_inceptionv3(model, train_dataloader, n_epoch=common.N_EPOCH):
             # Put model back in training mode
             model.train()
 
-        print(f"##### EPOCH {epoch} END #######\n\n")
-
-    print("Training took {:.2f} sec".format(time.time() - train_start_time))
+    print( "Training took {:.2f} sec".format( time.time() - train_start_time ) )
 
     return model
 

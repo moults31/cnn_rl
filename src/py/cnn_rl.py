@@ -22,13 +22,6 @@ class CNN_RL( nn.Module ):
         self.fc1      = nn.Linear( in_features=128, out_features=2 ) 
         self.dropout2 = nn.Dropout( p=0.25 )
 
-        # self.conv1    = nn.Conv2d( in_channels=1,  out_channels=32, kernel_size=(120,1) )
-        # self.conv2    = nn.Conv2d( in_channels=32, out_channels=32, kernel_size=(1,1) )
-        # self.pool     = nn.MaxPool2d( kernel_size=(1, 3) )
-        # self.dropout1 = nn.Dropout(p=0.25)
-        # self.fc1      = nn.Linear( in_features=512, out_features=2 )
-        # self.dropout2 = nn.Dropout( 0.5 )
-
     def forward( self, x ):
         x    = F.relu( self.conv1(x) )
         x    = F.relu( self.conv2(x) )
@@ -64,10 +57,10 @@ def main( n_epoch=common.N_EPOCH ):
     y_score_val,  y_pred_val,  y_val  = eval_model( model, val_loader  )
 
     # Evaluate the scores' predictions against the ground truth
-    #print("\nScores from test split:")
+
     auc, acc, p, r, f = common.evaluate_predictions( y_test, y_pred_test, score=y_score_test )
     common.print_scores( "test", acc, auc, p, r, f )   
-    #print("\nScores from val split:")
+
     auc, acc, p, r, f = common.evaluate_predictions( y_val, y_pred_val, score=y_score_val )
     common.print_scores( "val", acc, auc, p, r, f )
 
@@ -84,9 +77,11 @@ def eval_model( model, dataloader ):
         Y_val: truth labels for the val set. Should be an numpy array of ints
     """
     model.eval()
+    
     Y_score = torch.FloatTensor()
     Y_pred = []
     Y_true = []
+    
     for data, target in dataloader:
         data           = data.to( common.device )
         outputs        = model( data )
@@ -111,7 +106,8 @@ def train_cnn_rl( model, train_dataloader, n_epoch=common.N_EPOCH ):
     :return:
         model: trained model
     """
-    learn_rate = 0.0004   
+    learn_rate = 0.0004  
+    n_epoch = 40 
     
     # Assign class weights and create 2-class criterion
     class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 45.0
@@ -180,10 +176,8 @@ def train_cnn_rl( model, train_dataloader, n_epoch=common.N_EPOCH ):
                 y_score_val,  y_pred_val,  y_val  = eval_model( model, val_loader  )
 
                 # Evaluate the scores' predictions against the ground truth
-                # print("\nScores from test split:")
-                auc, acc, p, r, f      = common.evaluate_predictions( y_test, y_pred_test, score=y_score_test )
-                # print("\nScores from val split:")
-                auc2, acc2, p2, r2, f2 = common.evaluate_predictions( y_val, y_pred_val, score=y_score_val )
+                auc,  acc,  p,  r,  f  = common.evaluate_predictions( y_test, y_pred_test, score=y_score_test )
+                auc2, acc2, p2, r2, f2 = common.evaluate_predictions( y_val,  y_pred_val,  score=y_score_val  )
 
                 common.print_epoch_output( epoch+1, epoch_time, curr_epoch_loss, acc, auc, p, r, f, acc2, auc2, p2, r2, f2 )
 
