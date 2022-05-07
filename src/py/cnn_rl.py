@@ -106,8 +106,7 @@ def train_cnn_rl( model, train_dataloader, n_epoch=common.N_EPOCH ):
     :return:
         model: trained model
     """
-    learn_rate = 0.0004  
-    n_epoch = 40 
+    learn_rate = 0.0004
     
     # Assign class weights and create 2-class criterion
     class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 45.0
@@ -156,8 +155,6 @@ def train_cnn_rl( model, train_dataloader, n_epoch=common.N_EPOCH ):
                 print( '.', end='', flush=True )
             i = i + 1
 
-        #print( f"\nEpoch {epoch}: curr_epoch_loss={np.mean(curr_epoch_loss)}" )
-        #print( "Epoch took {:.2f} sec".format( time.time() - epoch_start_time ) )
         epoch_time      = time.time() - epoch_start_time
         curr_epoch_loss = np.mean( curr_epoch_loss )
 
