@@ -155,9 +155,14 @@ def train_rnn(model, train_dataloader, n_epoch=common.N_EPOCH):
 
                 # Evaluate the scores' predictions against the ground truth
                 print("\nScores from test split:")
-                common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
+                auc = common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
                 print("\nScores from val split:")
                 common.evaluate_predictions(y_val, y_pred_val, score=y_score_val)
+
+                # Stop early if we hit our target
+                if common.DO_EARLY_STOPPING and auc >= common.TARGET_AUC_RNN:
+                    break
+
             # Put model back in training mode
             model.train()
 

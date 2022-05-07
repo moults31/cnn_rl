@@ -95,7 +95,6 @@ def train_cnn(model, train_dataloader, n_epoch=common.N_EPOCH):
         model: trained model
     """
     # Assign class weights and create 2-class criterion
-    # class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 13.78
     class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 30.0
     print(f"Class weight ratio: {class_weight_ratio}")
     weights = [1.0/class_weight_ratio, 1.0-(1.0/class_weight_ratio)]
@@ -151,11 +150,17 @@ def train_cnn(model, train_dataloader, n_epoch=common.N_EPOCH):
 
                 # Evaluate the scores' predictions against the ground truth
                 print("\nScores from test split:")
-                common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
+                auc = common.evaluate_predictions(y_test, y_pred_test, score=y_score_test)
                 print("\nScores from val split:")
                 common.evaluate_predictions(y_val, y_pred_val, score=y_score_val)
+
+                # Stop early if we hit our target
+                if common.DO_EARLY_STOPPING and auc >= common.TARGET_AUC_CNN:
+                    break
+
             # Put model back in training mode
             model.train()
+
         print(f"##### EPOCH {epoch} END #######\n\n")
 
     print("Training took {:.2f} sec".format(time.time() - train_start_time))
