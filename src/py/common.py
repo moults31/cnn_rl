@@ -34,7 +34,7 @@ CSV_PARSER_BATCH_SIZE = 10000000
 # Set range of patients to process images for. Set CSV_PARSER_PATIENTID_DO_LIMIT to False to uncap limit.
 CSV_PARSER_PATIENTID_DO_LIMIT = True
 CSV_PARSER_PATIENTID_MIN      = 10000019   # 12817000
-CSV_PARSER_PATIENTID_MAX      = 19999987   # 12857000
+CSV_PARSER_PATIENTID_MAX      = 10999987   # 12857000
 # CSV_PARSER_PATIENTID_MAX    = 13217000
 
 # Prediction thresholds for clinical scores
@@ -66,6 +66,7 @@ CS_SOFA_PREDS_FILE_NAME = 'sofa_preds.csv'
 class Norm_method( Enum ):
     MINMAX = 1
     CUSTOM = 2
+    REFMINMAX = 3
 NORM_METHOD = Norm_method.MINMAX
 
 # Used for indexing braden items in patient_visit
@@ -198,16 +199,25 @@ def normalize(
 
     val_normalized = None
 
-    if ( method == Norm_method.MINMAX ):
-        min = stats[feature_id][Stats_col.VAL_MIN]
-        max = stats[feature_id][Stats_col.VAL_MAX]
+    min = stats[feature_id][Stats_col.VAL_MIN]
+    max = stats[feature_id][Stats_col.VAL_MAX]
 
-        if var_type == Var_type.BINARY:
-            val_normalized = np.interp(valuenum, [0.0, 1.0], [NORM_OUT_MIN, NORM_OUT_MAX])
+    # Handle common variable types
+    if var_type == Var_type.BINARY:
+        val_normalized = np.interp(valuenum, [0.0, 1.0], [NORM_OUT_MIN, NORM_OUT_MAX])
+
+    elif var_type == Var_type.CONTINUOUS_INCREMENT:
+        val_normalized = np.interp( valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX] )
             
-        elif var_type == Var_type.CONTINUOUS:
+    elif var_type == Var_type.BINARY_POINT:
+        val_normalized = np.interp( valuenum, [0.0, 1.0], [NORM_OUT_MIN, NORM_OUT_MAX] )
+    else:
+        assert ((var_type == Var_type.CONTINUOUS) or (var_type == Var_type.CONTINUOUS_WITH_REF))
+
+    # Handle scheme-specific variable types
+    if ( method == Norm_method.CUSTOM ):
+        if var_type == Var_type.CONTINUOUS:
             val_normalized = np.interp(valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX])
-            
         elif var_type == Var_type.CONTINUOUS_WITH_REF:
             if valuenum < ref_min:
                 val_normalized = np.interp(valuenum, [min, ref_min], [NORM_OUT_MAX, NORM_OUT_MIN])
@@ -215,17 +225,17 @@ def normalize(
                 val_normalized = np.interp(valuenum, [ref_max, max], [NORM_OUT_MIN, NORM_OUT_MAX])
             else:
                 val_normalized = NORM_OUT_MIN
-        
-        elif var_type == Var_type.CONTINUOUS_INCREMENT:
-            val_normalized = np.interp( valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX] )
-                
-        elif var_type == Var_type.BINARY_POINT:
-            val_normalized = np.interp( valuenum, [0.0, 1.0], [NORM_OUT_MIN, NORM_OUT_MAX] )
+    elif ( method == Norm_method.MINMAX ):
+        if (var_type == Var_type.CONTINUOUS) or (var_type == Var_type.CONTINUOUS_WITH_REF):
+            val_normalized = np.interp(valuenum, [min, max], [NORM_OUT_MIN, NORM_OUT_MAX])
+    elif ( method == Norm_method.REFMINMAX ):
+        if (var_type == Var_type.CONTINUOUS) or (var_type == Var_type.CONTINUOUS_WITH_REF):
+            val_normalized = np.interp(valuenum, [ref_min, ref_max], [NORM_OUT_MIN, NORM_OUT_MAX])
 
-        return val_normalized
-
-    elif method == Norm_method.CUSTOM:
+    else:
         raise NotImplementedError
+
+    return val_normalized
 
 
 def dump_outputs(y_pred, y_true):
