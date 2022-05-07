@@ -28,6 +28,10 @@ EVAL_EVERY_EPOCH = True
 # Special patient ID where we hide the itemid to rowid mappings
 MAPPING_PATIENT_ID = 0
 
+# Optional forced seed for split generation
+USE_SPLITS_SEED = False
+SPLITS_SEED = 0
+
 # Batch size for number of input csv rows to parse before dumping images and deleting runtime image representations
 CSV_PARSER_BATCH_SIZE = 10000000
 
@@ -265,13 +269,37 @@ def evaluate_predictions( truth, preds, score=None, average='binary' ):
     print( f"Recall {r}"   )
     print( f"FScore {f}"   )
 
+splits = None
 def get_split_as_string(i, n):
-    test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
-    val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
+    global splits
+    # Randomly generate splits dict on the first call
+    if splits is None:
+        # Establish split percentages
+        test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
+        val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
+        splits = dict()
 
-    if i >= test_start_idx and i < val_start_idx:
+        # Seed now if desired, else never do
+        if USE_SPLITS_SEED:
+            np.random.seed(SPLITS_SEED)
+
+        # Shuffle each i randomly and uniquely within the range
+        # rand_range = random.shuffle(list(range(n)))
+        rand_range = np.random.permutation(n)
+
+        # Assign each i to the appropriate split percentage-wise
+        for x in range(n):
+            if rand_range[x] >= test_start_idx and rand_range[x] < val_start_idx:
+                splits[x] = 0
+            elif rand_range[x] >= val_start_idx:
+                splits[x] = 1
+            else:
+                splits[x] = 2
+
+    # Assign the supplied i to the correct split
+    if splits[i] == 0:
         return 'test'
-    elif i >= val_start_idx:
+    elif splits[i] == 1:
         return 'val'
-    else:
+    elif splits[i] == 2:
         return 'train'
