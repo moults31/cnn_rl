@@ -49,7 +49,7 @@ CSV_PARSER_BATCH_SIZE = 10000000
 # Set range of patients to process images for. Set CSV_PARSER_PATIENTID_DO_LIMIT to False to uncap limit.
 CSV_PARSER_PATIENTID_DO_LIMIT = True
 CSV_PARSER_PATIENTID_MIN      = 10000019
-CSV_PARSER_PATIENTID_MAX      = 10099987
+CSV_PARSER_PATIENTID_MAX      = 19999987
 
 # Prediction thresholds for clinical scores
 MEWS_THRESHOLD = 2.9
