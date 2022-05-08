@@ -302,35 +302,13 @@ def print_scores( label, acc, auc, p, r, f ):
     print( "%8s %-18s %-18s %-18s %-18s %-18s" % ( " ", "Accuracy", "AUC", "Precision", "Recall", "F1-Score" ) )
     print( "%7s: %.16f %.16f %.16f %.16f %.16f" % ( label, acc, auc, p, r, f ) )
 
-splits = None
-def get_split_as_string(i, n, seed):
-    global splits
-    # Randomly generate splits dict on the first call
-    if splits is None:
-        # Establish split percentages
-        test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
-        val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
-        splits = dict()
+def get_split_as_string(i, n):
+    test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
+    val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
 
-        np.random.seed(int(seed))
-
-        # Shuffle each i randomly and uniquely within the range
-        # rand_range = random.shuffle(list(range(n)))
-        rand_range = np.random.permutation(n)
-
-        # Assign each i to the appropriate split percentage-wise
-        for x in range(n):
-            if rand_range[x] >= test_start_idx and rand_range[x] < val_start_idx:
-                splits[x] = 0
-            elif rand_range[x] >= val_start_idx:
-                splits[x] = 1
-            else:
-                splits[x] = 2
-
-    # Assign the supplied i to the correct split
-    if splits[i] == 0:
+    if i >= test_start_idx and i < val_start_idx:
         return 'test'
-    elif splits[i] == 1:
+    elif i >= val_start_idx:
         return 'val'
-    elif splits[i] == 2:
+    else:
         return 'train'

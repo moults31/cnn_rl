@@ -288,8 +288,7 @@ def generate_images(patient_visits: dict):
     try:
         os.makedirs(img_path)
     except:
-        print(f"ERROR: Dir already exists: {img_path}\n")
-        raise
+        pass
 
     for key in patient_visits:
         visit = patient_visits[key]
