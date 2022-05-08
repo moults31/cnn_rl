@@ -44,7 +44,8 @@ def main( data_path, n_epoch=common.N_EPOCH, class_weight=common.CLASS_WEIGHT_RA
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
     """
-    print( f"Running on CUDA device: {common.device}" )
+    print( f"\nRunning CNN_RL on CUDA device: {common.device}" )
+    print( f"            Cohort: {os.path.basename(data_path)}")
 
     # Load images and labels for each split
     train_loader, test_loader, val_loader = common.load_data(data_path=data_path)
@@ -109,7 +110,6 @@ def train_cnn_rl( model, train_dataloader, data_path, n_epoch=common.N_EPOCH, cl
     """
     # Assign class weights and create 2-class criterion
     class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else class_weight
-    
     print( f"     Number epochs: {n_epoch}"    )  
     print( f"     Learning rate: {learn_rate}" )   
     print( f"Class weight ratio: {class_weight_ratio}" )

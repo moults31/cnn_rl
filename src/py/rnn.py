@@ -40,7 +40,8 @@ def main( data_path, n_epoch=common.N_EPOCH, class_weight=common.CLASS_WEIGHT_RA
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
     """
-    print( f"Running on CUDA device: {common.device}" )
+    print( f"\nRunning RNN on CUDA device: {common.device}"    )
+    print( f"            Cohort: {os.path.basename(data_path)}")
 
     # Load images and labels for each split
     train_loader, test_loader, val_loader = common.load_data(data_path=data_path)
