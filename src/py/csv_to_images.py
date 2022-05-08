@@ -9,8 +9,8 @@ import numpy as np
 import cv2
 import time
 
-# Optional suffix for output image name, use for debugging.
-OUT_IMG_SUFFIX = ''
+# Name for generated cohort
+COHORT_NAME = ''
 
 def parse_csv_to_images( csv_file: str ):
     """
@@ -274,48 +274,44 @@ def handle_special_itemid(itemid, val_num, visit, stats, item2feature):
         hour_reel = (hour_reel / 23.0) * common.NORM_OUT_MAX
         visit.img[itemid, :] = hour_reel
 
-
-
-
 def generate_images(patient_visits: dict):
     """
-    Generates an image for the given patient using OpenCV.
-    Images are saved to IMAGES_DIR and named by patient_id.
+    Generates an image for each patientvisit using OpenCV.
+    Images are saved in the following structure:
+    <repo>/images/<orig_cohort_name>/master/<all_the_images>
     """
     i = 0
+    img_path = os.getenv( 'IMAGES_DIR' )
+
+    img_path = os.path.join( img_path, COHORT_NAME, 'master' )
+
+    try:
+        os.makedirs(img_path)
+    except:
+        print(f"ERROR: Dir already exists: {img_path}\n")
+        raise
+
     for key in patient_visits:
         visit = patient_visits[key]
 
-        # Determine which split this patient will fall into and set the path accordingly.
-        # Todo: Add a feature for shuffling splits
-        img_path = os.getenv( 'IMAGES_DIR' )
-        split    = common.get_split_as_string( i, len( patient_visits ) )
-        img_path = os.path.join( img_path, split )
+        # Name image based on patient, visit, ground truth
+        img_name = os.path.join( 
+            img_path, 
+            f"{visit.patient_id}_{visit.visit_id}_{visit.hospital_expire_flag}.png" 
+        )
 
-        # Todo: Come up with a way to open in 'w' mode the first time we touch a file in a given run
-        with open( os.path.join( img_path, common.ANNOTATIONS_FILE_NAME), 'a', newline='' ) as f:
-            label_writer = writer( f, delimiter=',' )
+        # Create 3-channel image
+        img = np.zeros((common.N_ROWS, common.N_COLS, 3), dtype=int)
 
-            img_name = os.path.join( 
-                img_path, 
-                f"{visit.patient_id}_{visit.visit_id}_{visit.hospital_expire_flag}{OUT_IMG_SUFFIX}.png" 
-            )
-            # Write label for this patient into labels.csv
-            line = [c.strip() for c in f"{os.path.basename(img_name)}, {visit.hospital_expire_flag}".strip(', ').split(',')]
-            label_writer.writerow(line)
+        # Populate it with patient timeline, duplicated in all 3 channels
+        visit.img = visit.img
+        img[:, :, 0] = visit.img
+        img[:, :, 1] = visit.img
+        img[:, :, 2] = visit.img
 
-            # Create 3-channel image
-            img = np.zeros((common.N_ROWS, common.N_COLS, 3), dtype=int)
+        cv2.imwrite(img_name, img)
 
-            # Populate it with patient timeline, duplicated in all 3 channels
-            visit.img = visit.img
-            img[:, :, 0] = visit.img
-            img[:, :, 1] = visit.img
-            img[:, :, 2] = visit.img
-
-            cv2.imwrite(img_name, img)
-
-            i = i + 1
+        i = i + 1
 
 if __name__ == "__main__":
     """
@@ -326,14 +322,15 @@ if __name__ == "__main__":
     try:
         csv_file = sys.argv[1]
     except:
-        print("Usage: python csv_to_images.py <csv_file>")
+        print("Usage: python csv_to_images.py <csv_file> <cohort_name>")
         raise
 
     # Store output image name suffix if supplied, but carry on if not
     try:
-        OUT_IMG_SUFFIX = sys.argv[2]
+        COHORT_NAME = sys.argv[2]
     except:
-        pass
+        print("Usage: python csv_to_images.py <csv_file> <cohort_name>")
+        raise
 
     path = os.path.join( os.getenv('DATA_DIR'), csv_file )
     parse_csv_to_images( path )

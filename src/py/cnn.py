@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import time
+import argparse
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 class StandardCNN( nn.Module ):
@@ -30,7 +31,7 @@ class StandardCNN( nn.Module ):
         x = F.softmax( x, dim=1 )
         return x
 
-def main( n_epoch=common.N_EPOCH ):
+def main( data_path, n_epoch=common.N_EPOCH, class_weight=common.CLASS_WEIGHT_RATIO, learning_rate=1e-3 ):
     """
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
@@ -38,11 +39,11 @@ def main( n_epoch=common.N_EPOCH ):
     print( f"Running on CUDA device: {common.device}" )
 
     # Load images and labels for each split
-    train_loader, test_loader, val_loader = common.load_data()
+    train_loader, test_loader, val_loader = common.load_data(data_path=data_path)
 
     # Create and train the model
     model = StandardCNN().to( common.device )
-    model = train_cnn( model, train_loader, n_epoch )
+    model = train_cnn( model, train_loader, data_path, n_epoch, class_weight, learning_rate )
 
     # Evaluate the model's predictions against the ground truth
     y_score_test, y_pred_test, y_test = eval_model( model, test_loader )
@@ -89,7 +90,7 @@ def eval_model( model, dataloader ):
 
     return Y_score, Y_pred, Y_true
 
-def train_cnn( model, train_dataloader, n_epoch=common.N_EPOCH ):
+def train_cnn( model, train_dataloader, data_path, n_epoch=common.N_EPOCH, class_weight=common.CLASS_WEIGHT_RATIO, learn_rate=1e-3 ):
     """
     :param model: A CNN model
     :param train_dataloader: the DataLoader of the training data
@@ -97,10 +98,8 @@ def train_cnn( model, train_dataloader, n_epoch=common.N_EPOCH ):
     :return:
         model: trained model
     """
-    learn_rate = 0.0004
-    
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 30.0
+    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else class_weight
     
     print( f"     Number epochs: {n_epoch}"    )  
     print( f"     Learning rate: {learn_rate}" )   
@@ -154,7 +153,7 @@ def train_cnn( model, train_dataloader, n_epoch=common.N_EPOCH ):
                 model.eval()
 
                 # Get entire dataloader
-                _, test_loader, val_loader = common.load_data()
+                _, test_loader, val_loader = common.load_data(data_path=data_path)
                 # Evaluate the model's predictions against the ground truth
                 y_score_test, y_pred_test, y_test = eval_model( model, test_loader )
                 y_score_val,  y_pred_val,  y_val  = eval_model( model, val_loader  )
@@ -180,4 +179,21 @@ if __name__ == "__main__":
     """
     Main section for when this file is invoked directly.
     """
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cohort', type=str, nargs=1,
+                        help='Path to shuffled cohort, relative to IMAGES_DIR')
+    parser.add_argument('-n', '--n_epochs', type=int, nargs=1,
+                        help='Number of training epochs')
+    parser.add_argument('-w', '--class_weight', type=float, nargs=1,
+                        help='Class weight ratio to use for training')
+    parser.add_argument('-l', '--learning_rate', type=float, nargs=1,
+                        help='Learning rate to use for training')
+    args = parser.parse_args()
+
+    cohort_path = os.path.join(os.getenv('IMAGES_DIR'), args.cohort[0])
+
+    n_epochs = common.N_EPOCH
+    if args.n_epochs is not None:
+        n_epochs = args.n_epochs[0]
+
+    main(cohort_path, n_epochs, args.class_weight[0], args.learning_rate[0])

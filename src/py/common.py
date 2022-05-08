@@ -49,7 +49,7 @@ CSV_PARSER_BATCH_SIZE = 10000000
 # Set range of patients to process images for. Set CSV_PARSER_PATIENTID_DO_LIMIT to False to uncap limit.
 CSV_PARSER_PATIENTID_DO_LIMIT = True
 CSV_PARSER_PATIENTID_MIN      = 10000019
-CSV_PARSER_PATIENTID_MAX      = 19999987
+CSV_PARSER_PATIENTID_MAX      = 10099987
 
 # Prediction thresholds for clinical scores
 MEWS_THRESHOLD = 2.9
@@ -302,13 +302,35 @@ def print_scores( label, acc, auc, p, r, f ):
     print( "%8s %-18s %-18s %-18s %-18s %-18s" % ( " ", "Accuracy", "AUC", "Precision", "Recall", "F1-Score" ) )
     print( "%7s: %.16f %.16f %.16f %.16f %.16f" % ( label, acc, auc, p, r, f ) )
 
-def get_split_as_string(i, n):
-    test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
-    val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
+splits = None
+def get_split_as_string(i, n, seed):
+    global splits
+    # Randomly generate splits dict on the first call
+    if splits is None:
+        # Establish split percentages
+        test_start_idx = n * ( 1 - VAL_SPLIT_PCT ) * ( 1 - TEST_SPLIT_PCT )
+        val_start_idx  = n * ( 1 - VAL_SPLIT_PCT )
+        splits = dict()
 
-    if i >= test_start_idx and i < val_start_idx:
+        np.random.seed(int(seed))
+
+        # Shuffle each i randomly and uniquely within the range
+        # rand_range = random.shuffle(list(range(n)))
+        rand_range = np.random.permutation(n)
+
+        # Assign each i to the appropriate split percentage-wise
+        for x in range(n):
+            if rand_range[x] >= test_start_idx and rand_range[x] < val_start_idx:
+                splits[x] = 0
+            elif rand_range[x] >= val_start_idx:
+                splits[x] = 1
+            else:
+                splits[x] = 2
+
+    # Assign the supplied i to the correct split
+    if splits[i] == 0:
         return 'test'
-    elif i >= val_start_idx:
+    elif splits[i] == 1:
         return 'val'
-    else:
+    elif splits[i] == 2:
         return 'train'

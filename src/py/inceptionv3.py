@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms, models
 import time
+import argparse
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 def run_tutorial():
@@ -61,7 +62,7 @@ def run_tutorial():
     for i in range(top5_prob.size(0)):
         print(categories[top5_catid[i]], top5_prob[i].item())
 
-def main(n_epoch=common.N_EPOCH):
+def main( data_path, n_epoch=common.N_EPOCH, class_weight=common.CLASS_WEIGHT_RATIO, learning_rate=1e-3 ):
     """
     Main function.
     Creates a model, trains it, and evaluates it against test set and val set.
@@ -70,13 +71,13 @@ def main(n_epoch=common.N_EPOCH):
     print( f"Running on CUDA common.device: {common.device}" )
 
     # Load images and labels for each split
-    train_loader, test_loader, val_loader = common.load_data( batch_size=16 )
+    train_loader, test_loader, val_loader = common.load_data( batch_size=16, data_path=data_path )
 
     # Create and train the model
     model = models.Inception3( num_classes=2 )
     model.to( common.device )
 
-    train_inceptionv3(model, train_loader, n_epoch)
+    model = train_inceptionv3( model, train_loader, data_path, n_epoch, class_weight, learning_rate )
 
     # Evaluate the model's predictions against the ground truth
     with torch.no_grad():
@@ -136,7 +137,7 @@ def eval_model( model, dataloader ):
 
     return Y_score, Y_pred, Y_true
 
-def train_inceptionv3( model, train_dataloader, n_epoch=common.N_EPOCH ):
+def train_inceptionv3( model, train_dataloader, data_path, n_epoch=common.N_EPOCH, class_weight=common.CLASS_WEIGHT_RATIO, learn_rate=1e-3 ):
     """
     :param model: An Inceptionv3 model
     :param train_dataloader: the DataLoader of the training data
@@ -144,10 +145,8 @@ def train_inceptionv3( model, train_dataloader, n_epoch=common.N_EPOCH ):
     :return:
         model: trained model
     """
-    learn_rate = 5e-2
-    
     # Assign class weights and create 2-class criterion
-    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else 20.0
+    class_weight_ratio = common.CLASS_WEIGHT_RATIO if common.FORCE_CLASS_WEIGHT else class_weight
     
     print( f"     Number epochs: {n_epoch}"    )  
     print( f"     Learning rate: {learn_rate}" )   
@@ -199,8 +198,8 @@ def train_inceptionv3( model, train_dataloader, n_epoch=common.N_EPOCH ):
                 print('.', end='', flush=True)
             i = i + 1
 
-        print(f"\nEpoch {epoch}: curr_epoch_loss={np.mean(curr_epoch_loss)}")
-        print("Epoch took {:.2f} sec".format(time.time() - epoch_start_time))
+        epoch_time      = time.time() - epoch_start_time
+        curr_epoch_loss = np.mean( curr_epoch_loss )
 
         # Optionally make predictions and evaluate between every epoch.
         # Adds a lot of time, but is worth it to get intermediate readouts when training epochs are very slow
@@ -210,7 +209,7 @@ def train_inceptionv3( model, train_dataloader, n_epoch=common.N_EPOCH ):
                 model.eval()
 
                 # Get entire dataloader
-                _, test_loader, val_loader = common.load_data(batch_size=16)
+                _, test_loader, val_loader = common.load_data(batch_size=16, data_path=data_path)
                 # Evaluate the model's predictions against the ground truth
                 y_score_test, y_pred_test, y_test = eval_model( model, test_loader )
                 y_score_val,  y_pred_val,  y_val  = eval_model( model, val_loader  )
@@ -220,7 +219,6 @@ def train_inceptionv3( model, train_dataloader, n_epoch=common.N_EPOCH ):
                 auc2, acc2, p2, r2, f2 = common.evaluate_predictions( y_val,  y_pred_val,  score=y_score_val  )
 
                 common.print_epoch_output( epoch+1, epoch_time, curr_epoch_loss, acc, auc, p, r, f, acc2, auc2, p2, r2, f2 )
-
 
                 # Stop early if we hit our target
                 if common.DO_EARLY_STOPPING and auc >= common.TARGET_AUC_INCEPTION:
@@ -237,4 +235,21 @@ if __name__ == "__main__":
     """
     Main section for when this file is invoked directly.
     """
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cohort', type=str, nargs=1,
+                        help='Path to shuffled cohort, relative to IMAGES_DIR')
+    parser.add_argument('-n', '--n_epochs', type=int, nargs=1,
+                        help='Number of training epochs')
+    parser.add_argument('-w', '--class_weight', type=float, nargs=1,
+                        help='Class weight ratio to use for training')
+    parser.add_argument('-l', '--learning_rate', type=float, nargs=1,
+                        help='Learning rate to use for training')
+    args = parser.parse_args()
+
+    cohort_path = os.path.join(os.getenv('IMAGES_DIR'), args.cohort[0])
+
+    n_epochs = common.N_EPOCH
+    if args.n_epochs is not None:
+        n_epochs = args.n_epochs[0]
+
+    main(cohort_path, n_epochs, args.class_weight[0], args.learning_rate[0])
