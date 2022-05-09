@@ -66,7 +66,7 @@ source ./env.sh
 #### End-to-End Run
 Step 0: See [our SQL README](src/sql/README.md) before running our SQL scripts to extract MIMIC-IV data.
 
-Step 1: Generate patient data from MIMIC-IV SQL database as CSV. Open a SQL-compatible GUI with a connection to your MIMIC-IV database. Then, run `set_cohort_icu_ed.sql` followed by `export_patient_data.sql`. Finally, use the GUI to export the result as a CSV and place it in `$DATA_DIR`
+Step 1: Generate patient data from MIMIC-IV SQL database as CSV. Open a SQL-compatible GUI with a connection to your MIMIC-IV database. Then, run `set_cohort_xxx.sql` followed by `export_patient_data.sql`. Finally, use the GUI to export the result as a CSV and place it in `$DATA_DIR`
 
 Step 2: Generate MEWS/SOFA data from MIMIC-IV SQL database as CSV. In the same GUI as Step 1, run `mews_score.sql` and export the result as CSV and place it in `$DATA_DIR`. Then, repeat with `sofa_score.sql`.
 
