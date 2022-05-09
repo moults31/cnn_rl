@@ -123,7 +123,7 @@ def train_cnn_rl( model, train_dataloader, data_path, n_epoch=common.N_EPOCH, cl
     optimizer = torch.optim.RMSprop( model.parameters(), lr=learn_rate )
 
     # Assign decay 1e-6 as per the paper
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=range(n_epoch), gamma=1e-6)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=range(n_epoch), gamma=1e-6)
     model.train() # prep model for training
 
     train_start_time = time.time()
@@ -145,7 +145,7 @@ def train_cnn_rl( model, train_dataloader, data_path, n_epoch=common.N_EPOCH, cl
             loss    = criterion(outputs, target)
             loss.backward()
             optimizer.step()
-            # scheduler.step()
+            scheduler.step()
 
             curr_epoch_loss.append( loss.cpu().data.numpy() )
 

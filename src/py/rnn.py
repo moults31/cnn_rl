@@ -108,7 +108,6 @@ def train_rnn( model, train_dataloader, data_path, n_epoch=common.N_EPOCH, class
     weights            = [1.0 / class_weight_ratio, 1.0 - (1.0 / class_weight_ratio) ]
     class_weights      = torch.FloatTensor( weights ).to( common.device )
     criterion          = torch.nn.modules.loss.CrossEntropyLoss( weight=class_weights )
-    
     print( f"     Number epochs: {n_epoch}"    )  
     print( f"     Learning rate: {learn_rate}" )   
     print( f"Class weight ratio: {class_weight_ratio}" )
