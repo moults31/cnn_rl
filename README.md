@@ -64,20 +64,20 @@ source ./env.sh
 
 ### Running
 #### End-to-End Run
-Step 1: Generate patient data from MIMIC-IV SQL database as CSV. Open a SQL-compatible GUI with a connection to your MIMIC-IV database. Then, run `set_cohort_icu_ed.sql` followed by `export_patient_data.sql`. Finally, use the GUI to export the result as a CSV and place it in `<path/to/cnn_rl>/data`
+Step 1: Generate patient data from MIMIC-IV SQL database as CSV. Open a SQL-compatible GUI with a connection to your MIMIC-IV database. Then, run `set_cohort_icu_ed.sql` followed by `export_patient_data.sql`. Finally, use the GUI to export the result as a CSV and place it in `$DATA_DIR`
 
-Step 2: Generate MEWS/SOFA data from MIMIC-IV SQL database as CSV. In the same GUI as Step 1, run `mews_score.sql` and export the result as CSV and place it in `<path/to/cnn_rl>/data`. Then, repeat with `sofa_score.sql`.
+Step 2: Generate MEWS/SOFA data from MIMIC-IV SQL database as CSV. In the same GUI as Step 1, run `mews_score.sql` and export the result as CSV and place it in `$DATA_DIR`. Then, repeat with `sofa_score.sql`.
 
 Step 3: Compute MEWS and SOFA scores
 ```
 cd src/py
-python ./mews.py ../../data/<exported_mews_data>.csv
-python ./sofa.py ../../data/<exported_sofa_data>.csv
+python ./mews.py $DATA_DIR/<exported_mews_data>.csv
+python ./sofa.py $DATA_DIR/<exported_sofa_data>.csv
 ```
 
 Step 4: Parse patient data CSV to images
 ```
-python ./csv_to_images.py ../../data/<exported_data>.csv <arbitrary_cohort_name>
+python ./csv_to_images.py $DATA_DIR/<exported_data>.csv <arbitrary_cohort_name>
 ```
 
 Step 5: Shuffle cohort and create train, test, val splits (optionally limiting cohort size)
