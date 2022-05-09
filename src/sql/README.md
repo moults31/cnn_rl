@@ -6,9 +6,9 @@ The SQL scripts in this directory can be used to aggregate and export patient da
 
 The first step is to set the patient cohort so the export script knows what data to aggregate.  The patient cohort is set by a choice of scripts:
 
-__set_patient_cohort_icu.sql__: Defines cohort as patients with a stay of at least 48 hours based on time of admission to the ICU.
+__set_cohort_icu.sql__: Defines cohort as patients with a stay of at least 48 hours based on time of admission to the ICU.
 
-__set_patient_cohort_icu_ed.sql__: Defines cohort as patients with a stay of at least 48 hours based on time of admission to the ICU or ED - whichever occurs first.  
+__set_cohort_icu_ed.sql__: Defines cohort as patients with a stay of at least 48 hours based on time of admission to the ICU or ED - whichever occurs first.  
 
 In the latter case, the 48 hour interval is only counted for hours which the patient is actually in the hospital.  For example, if the patient first visits the ED at 12:00 pm and is discharged at 3:00 pm, that counts as 3 hours out of the 48 hour interval.  If the patient is later admitted to the ICU as part of the same visit (as defined in the mimic_core.admissions table), then data will be aggregated for the next 45 hours until the 48 hour interval is satisfied or the patient is discharged - whichever occurs first.  Data timestamped beyond the 45th hour after admission to the ICU is ignored.  There are no visits (that we know of) where a patient visits the ED and/or ICU more than once apiece (no 'ins and outs').
 
